@@ -151,4 +151,5 @@
 - [x] Added `/session` command to `SessionGatekeeper` mirroring Pi TUI's session inspection
 - [x] Implemented `AgentSessionManager.getSessionStatusSummary` querying native Pi `session.getSessionStats()` and `session.getContextUsage()`
 - [x] Displays active context token usage, total prompt volume, cache hit rate, token counts, cost estimate, and active schedules
+- [x] Fixed session persistence across Docker restarts: `SessionManager.open(meta.piSessionFile)` / `continueRecent()` instead of `SessionManager.create()`
 - [x] Unit tests and regression suite green, deployed

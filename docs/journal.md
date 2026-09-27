@@ -132,9 +132,15 @@
   - Added unit tests in `tests/compaction-coordinator.test.ts` and regression tests in `tests/regressions/intelligent-compaction.regression.test.ts`.
   - All 36 test files, 144 tests passing. Deployed to Docker.
 
-## 2026-09-27 — WhatsApp /session Status Command
-- Implemented `/session` command mirroring Pi TUI's session inspection:
-  - `src/session-gatekeeper.ts`: Intercepts `/session` in active chats and invokes `onSessionStatus`.
-  - `src/agent-session-manager.ts`: Implemented `getSessionStatusSummary` querying native Pi `session.getSessionStats()` and `session.getContextUsage()`.
-  - Formats clean WhatsApp response showing: Session ID, active model, timezone, message counts (user/assistant/tools), active context tokens and percentage, prompt token volume with cache hit rate, output tokens, cost in USD, and active schedules.
-  - All 36 test files, 147 tests passing. Deployed to Docker.
+## 2026-09-27 — Session Persistence Across Restarts Bug Fix
+- Root cause:
+  - `AgentSessionManager.getOrCreateSession` previously called `SessionManager.create(sessionDir, piSessionDir)`.
+  - In Pi SDK, `SessionManager.create(...)` explicitly creates a brand-new empty session file with 0 messages every time.
+  - On every Docker container reboot or restart, all previous history in the `.jsonl` transcript was orphaned and ignored.
+- Fixes implemented:
+  - `AgentSessionManager.getOrCreateSession` now persists `meta.piSessionFile` in `sessions/<uuid>/meta.json`.
+  - When re-awakening a session, it checks `meta.piSessionFile` and calls `SessionManager.open(meta.piSessionFile, piSessionDir)`, or falls back to `SessionManager.continueRecent(sessionDir, piSessionDir)`.
+  - Only creates a new file if `piSessionDir` has no `.jsonl` files at all.
+  - Pointed the active session `aaec552f-...` back to its authoritative 136-message transcript (1.3MB) containing all prior video extraction and geoguessr analysis.
+  - Added unit test in `tests/agent-manager.test.ts`.
+  - All 36 test files, 148 tests passing. Deployed to Docker.
