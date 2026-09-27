@@ -222,4 +222,72 @@ describe("WhatsAppLink message handling", () => {
     // Verify stop shuts down HTTP server cleanly
     await link.stop();
   });
+
+  it("sends image file via sendFile with image payload", async () => {
+    const link = new WhatsAppLink({
+      authDir: "./test-auth",
+      echoTracker,
+      logger: pino({ level: "silent" }),
+      onMessage: vi.fn(),
+    });
+
+    link.attachSocketEvents(mockSocket);
+
+    // Create a temp file to send
+    const tmpFile = "./test-auth-temp-img.png";
+    await import("fs/promises").then((fs) => fs.writeFile(tmpFile, "png-bytes"));
+
+    try {
+      const msgId = await link.sendFile("chat-1@s.whatsapp.net", {
+        filePath: tmpFile,
+        caption: "Check this picture",
+      });
+
+      expect(mockSocket.sendMessage).toHaveBeenCalledWith(
+        "chat-1@s.whatsapp.net",
+        expect.objectContaining({
+          image: expect.any(Buffer),
+          caption: "Check this picture",
+        }),
+        { messageId: msgId }
+      );
+      expect(echoTracker.isSelfEcho(msgId)).toBe(true);
+    } finally {
+      await import("fs/promises").then((fs) => fs.unlink(tmpFile).catch(() => {}));
+    }
+  });
+
+  it("sends document file via sendFile with document payload", async () => {
+    const link = new WhatsAppLink({
+      authDir: "./test-auth",
+      echoTracker,
+      logger: pino({ level: "silent" }),
+      onMessage: vi.fn(),
+    });
+
+    link.attachSocketEvents(mockSocket);
+
+    const tmpFile = "./test-auth-temp-doc.pdf";
+    await import("fs/promises").then((fs) => fs.writeFile(tmpFile, "pdf-bytes"));
+
+    try {
+      const msgId = await link.sendFile("chat-1@s.whatsapp.net", {
+        filePath: tmpFile,
+        caption: "Here is your report",
+        fileName: "annual-report.pdf",
+      });
+
+      expect(mockSocket.sendMessage).toHaveBeenCalledWith(
+        "chat-1@s.whatsapp.net",
+        expect.objectContaining({
+          document: expect.any(Buffer),
+          fileName: "annual-report.pdf",
+          mimetype: "application/pdf",
+        }),
+        { messageId: msgId }
+      );
+    } finally {
+      await import("fs/promises").then((fs) => fs.unlink(tmpFile).catch(() => {}));
+    }
+  });
 });

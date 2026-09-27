@@ -10,6 +10,7 @@ import type { WhatsAppLink } from "./whatsapp-link.js";
 
 import { registerSqliteStorageTool } from "./sqlite-storage.js";
 import { registerScheduleTool } from "./schedule-tool.js";
+import { registerSendFileTool, type SendFileSender } from "./send-file-tool.js";
 import type { SchedulerEngine } from "./scheduler-engine.js";
 
 import { chunkMessage } from "./message-chunker.js";
@@ -67,6 +68,9 @@ export function buildDefaultPreamble(
   lines.push(
     `A fired schedule's output goes straight to this WhatsApp chat, so make sure your response is something worth sending.`
   );
+  lines.push(
+    `To send a file, image, document (PDF, CSV, TXT, etc.), or audio back to the user, use the 'send_file' tool with the local file path.`
+  );
   if (customSystemPrompt) {
     lines.push(`\n${customSystemPrompt}`);
   }
@@ -81,6 +85,7 @@ export interface AgentSessionManagerOptions {
   thinkingLevel?: "off" | "low" | "medium" | "high";
   tz?: string;
   customSystemPrompt?: string;
+  defaultSender?: SendFileSender;
   presenceHeartbeatMs?: number;
   schedulerEngine?: SchedulerEngine;
   extensionFactories?: (sessionDir: string, sessionId: string) => any[];
@@ -96,6 +101,7 @@ export class AgentSessionManager {
   private readonly thinkingLevel: "off" | "low" | "medium" | "high";
   private readonly tz: string;
   private readonly customSystemPrompt?: string;
+  private readonly defaultSender?: SendFileSender;
   private readonly presenceHeartbeatMs: number;
   private readonly schedulerEngine?: SchedulerEngine;
   private readonly extensionFactories?: (sessionDir: string, sessionId: string) => any[];
@@ -113,6 +119,7 @@ export class AgentSessionManager {
     this.thinkingLevel = options.thinkingLevel ?? "medium";
     this.tz = options.tz || "Asia/Jakarta";
     this.customSystemPrompt = options.customSystemPrompt;
+    this.defaultSender = options.defaultSender;
     this.presenceHeartbeatMs = options.presenceHeartbeatMs ?? 7000;
     this.schedulerEngine = options.schedulerEngine;
     this.extensionFactories = options.extensionFactories;
@@ -137,7 +144,8 @@ export class AgentSessionManager {
   async getOrCreateSession(
     sessionId: string,
     chatJid: string,
-    preambleInfo?: Partial<SessionPreambleInfo>
+    preambleInfo?: Partial<SessionPreambleInfo>,
+    sender?: SendFileSender
   ): Promise<AgentSession> {
     const existing = this.liveSessions.get(sessionId);
     if (existing) {
@@ -178,6 +186,11 @@ export class AgentSessionManager {
 
     if (this.schedulerEngine) {
       defaultFactories.push(registerScheduleTool(sessionId, this.schedulerEngine));
+    }
+
+    const effectiveSender = sender || this.defaultSender;
+    if (effectiveSender) {
+      defaultFactories.push(registerSendFileTool(chatJid, sessionDir, effectiveSender));
     }
 
     const customFactories = this.extensionFactories ? this.extensionFactories(sessionDir, sessionId) : [];
@@ -225,7 +238,18 @@ export class AgentSessionManager {
       thinkingLevel: this.thinkingLevel,
       modelRuntime: this.modelRuntime,
       resourceLoader,
-      tools: ["read", "write", "edit", "bash", "grep", "find", "ls", "sqlite_storage", "schedule"],
+      tools: [
+        "read",
+        "write",
+        "edit",
+        "bash",
+        "grep",
+        "find",
+        "ls",
+        "sqlite_storage",
+        "schedule",
+        "send_file",
+      ],
       sessionManager,
     });
 
@@ -268,7 +292,7 @@ export class AgentSessionManager {
     sessionId: string,
     chatJid: string,
     text: string,
-    waLink: WhatsAppLink | { sendPresenceUpdate: (chatJid: string, presence: any) => Promise<any>; sendMessage: (chatJid: string, text: string) => Promise<any> },
+    waLink: WhatsAppLink | { sendPresenceUpdate: (chatJid: string, presence: any) => Promise<any>; sendMessage: (chatJid: string, text: string) => Promise<any>; sendFile?: any },
     images?: ImageContent[],
     preambleInfo?: Partial<SessionPreambleInfo>
   ): Promise<string | null> {
@@ -278,7 +302,7 @@ export class AgentSessionManager {
     }, this.presenceHeartbeatMs);
 
     try {
-      const session = await this.getOrCreateSession(sessionId, chatJid, preambleInfo);
+      const session = await this.getOrCreateSession(sessionId, chatJid, preambleInfo, waLink as any);
       const promptOptions: any = { streamingBehavior: "followUp" };
       if (images && images.length > 0) {
         promptOptions.images = images;

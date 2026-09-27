@@ -11,6 +11,7 @@ import makeWASocket, {
 import type { Logger } from "pino";
 import qrcode from "qrcode-terminal";
 import fs from "fs/promises";
+import path from "path";
 import http from "node:http";
 import { EchoTracker } from "./echo-tracker.js";
 import { extractMessageInfo, type ExtractedMessage } from "./message-extractor.js";
@@ -24,6 +25,46 @@ export interface WhatsAppLinkOptions {
   onReady?: () => void;
   onGroupUpdate?: (chatJid: string) => void;
   qrHttpPort?: number;
+}
+
+export function detectMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  switch (ext) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".pdf":
+      return "application/pdf";
+    case ".csv":
+      return "text/csv";
+    case ".txt":
+    case ".log":
+      return "text/plain";
+    case ".json":
+      return "application/json";
+    case ".mp3":
+      return "audio/mpeg";
+    case ".ogg":
+      return "audio/ogg";
+    case ".wav":
+      return "audio/wav";
+    case ".m4a":
+      return "audio/mp4";
+    case ".zip":
+      return "application/zip";
+    case ".docx":
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    case ".xlsx":
+      return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    default:
+      return "application/octet-stream";
+  }
 }
 
 export function createMemoryCacheStore() {
@@ -324,6 +365,52 @@ export class WhatsAppLink {
       { messageId }
     );
 
+    return messageId;
+  }
+
+  async sendFile(
+    chatJid: string,
+    options: { filePath: string; caption?: string; fileName?: string }
+  ): Promise<string> {
+    if (!this.socket) {
+      throw new Error("Cannot send file: WhatsApp socket is not connected");
+    }
+
+    const buffer = await fs.readFile(options.filePath);
+    const mimeType = detectMimeType(options.filePath);
+    const baseName = options.fileName || path.basename(options.filePath);
+    const messageId = generateMessageIDV2(this.socket.user?.id);
+    this.echoTracker.track(messageId);
+
+    const autoMentions = options.caption ? this.extractMentions(options.caption, chatJid) : [];
+    const mentions = autoMentions.length > 0 ? autoMentions : undefined;
+
+    let payload: any;
+    if (mimeType.startsWith("image/")) {
+      payload = {
+        image: buffer,
+        mimetype: mimeType,
+        caption: options.caption,
+        mentions,
+      };
+    } else if (mimeType.startsWith("audio/")) {
+      payload = {
+        audio: buffer,
+        mimetype: mimeType,
+        caption: options.caption,
+        mentions,
+      };
+    } else {
+      payload = {
+        document: buffer,
+        mimetype: mimeType,
+        fileName: baseName,
+        caption: options.caption,
+        mentions,
+      };
+    }
+
+    await this.socket.sendMessage(chatJid, payload, { messageId });
     return messageId;
   }
 
