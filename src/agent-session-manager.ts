@@ -145,7 +145,7 @@ export class AgentSessionManager {
       thinkingLevel: this.thinkingLevel,
       modelRuntime: this.modelRuntime,
       resourceLoader,
-      tools: ["read", "write", "edit", "bash", "grep", "find", "ls"],
+      tools: ["read", "write", "edit", "bash", "grep", "find", "ls", "sqlite_storage", "schedule"],
       sessionManager,
     });
 

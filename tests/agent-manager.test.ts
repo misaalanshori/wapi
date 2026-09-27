@@ -61,6 +61,11 @@ describe("AgentSessionManager", () => {
     const session = await manager.getOrCreateSession(sessionId, chatJid);
     expect(session).toBe(mockAgentSession);
     expect(mockSessionFactory).toHaveBeenCalledTimes(1);
+    expect(mockSessionFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: expect.arrayContaining(["sqlite_storage", "schedule"]),
+      })
+    );
 
     // Verify directory and meta.json created
     const sessionDir = path.join(tmpDir, "sessions", sessionId);
