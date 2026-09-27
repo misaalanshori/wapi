@@ -30,12 +30,12 @@
 - [x] Phase 0 test suite passing
 
 ### Phase 1: Core Loop
-- [ ] Addressing Gate logic: DMs, small groups (<=2), large groups (>2 with @mention) (§8.2.1)
-- [ ] Session Registry (`registry.sqlite`): schema, CRUD, status management (§8.2.2)
-- [ ] Session Gatekeeper: `/init-session <secret> [uuid]` and `/deinit-session` (§8.2.2)
-- [ ] ModelRuntime initialization & model resolution fast-fail at startup (§8.3)
-- [ ] Agent Session Manager: lazy instantiation of Pi `AgentSession`, prompt injection with `followUp`, typing presence (`composing`/`paused`), outbound send (§8.3)
-- [ ] Phase 1 test suite passing
+- [x] Addressing Gate logic: DMs, small groups (<=2), large groups (>2 with @mention) (§8.2.1)
+- [x] Session Registry (`registry.sqlite`): schema, CRUD, status management (§8.2.2)
+- [x] Session Gatekeeper: `/init-session <secret> [uuid]` and `/deinit-session` (§8.2.2)
+- [x] ModelRuntime initialization & model resolution fast-fail at startup (§8.3)
+- [x] Agent Session Manager: lazy instantiation of Pi `AgentSession`, prompt injection with `followUp`, typing presence (`composing`/`paused`), outbound send (§8.3)
+- [x] Phase 1 test suite passing
 
 ### Phase 2: Memory
 - [ ] `sqlite_storage` tool implementation (§8.4)
