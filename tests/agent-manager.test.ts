@@ -110,6 +110,54 @@ describe("AgentSessionManager", () => {
     expect(mockSessionFactory).toHaveBeenCalledTimes(1);
   });
 
+  it("re-opens and continues existing session across restarts without creating a new session file", async () => {
+    const sessionId = "uuid-persistence-check";
+    const chatJid = "chat-persist@s.whatsapp.net";
+
+    let capturedSessionManager1: any;
+    let capturedSessionManager2: any;
+
+    const factory1 = vi.fn().mockImplementation(async (opts) => {
+      capturedSessionManager1 = opts.sessionManager;
+      opts.sessionManager.appendMessage({ role: "user", content: [{ type: "text", text: "Turn 1" }] });
+      opts.sessionManager.appendMessage({ role: "assistant", content: [{ type: "text", text: "Reply 1" }] });
+      return { session: mockAgentSession };
+    });
+
+    const manager1 = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test-model", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      sessionFactory: factory1,
+    });
+
+    await manager1.getOrCreateSession(sessionId, chatJid);
+    const sessionFile1 = capturedSessionManager1.getSessionFile();
+    expect(sessionFile1).toBeDefined();
+
+    // Now simulate manager restart (new manager instance with empty in-memory cache)
+    const factory2 = vi.fn().mockImplementation(async (opts) => {
+      capturedSessionManager2 = opts.sessionManager;
+      return { session: mockAgentSession };
+    });
+
+    const manager2 = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test-model", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      sessionFactory: factory2,
+    });
+
+    await manager2.getOrCreateSession(sessionId, chatJid);
+    const sessionFile2 = capturedSessionManager2.getSessionFile();
+
+    // MUST continue the exact same session file, not create a new one!
+    expect(sessionFile2).toBe(sessionFile1);
+    expect(capturedSessionManager2.getEntries().length).toBeGreaterThan(0);
+  });
+
   it("formats session status summary using Pi session stats and context usage", async () => {
     const mockStatsSession: any = {
       getSessionStats: vi.fn().mockReturnValue({

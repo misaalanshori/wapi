@@ -201,10 +201,12 @@ export class AgentSessionManager {
     await fs.mkdir(path.join(sessionDir, "storage-backups"), { recursive: true });
 
     // Write or update meta.json
+    let meta: any = null;
     try {
-      await fs.access(metaPath);
+      const raw = await fs.readFile(metaPath, "utf8");
+      meta = JSON.parse(raw);
     } catch {
-      const meta = {
+      meta = {
         sessionId,
         chatJid,
         createdAt: new Date().toISOString(),
@@ -269,7 +271,24 @@ export class AgentSessionManager {
       // safe fallback if sharedAgentDir is not yet populated
     }
 
-    const sessionManager = SessionManager.create(sessionDir, piSessionDir);
+    let sessionManager: SessionManager;
+    if (meta.piSessionFile && (await fs.access(meta.piSessionFile).then(() => true).catch(() => false))) {
+      sessionManager = SessionManager.open(meta.piSessionFile, piSessionDir);
+    } else {
+      const files = await fs.readdir(piSessionDir).catch(() => []);
+      const jsonlFiles = files.filter((f) => f.endsWith(".jsonl"));
+      if (jsonlFiles.length > 0) {
+        sessionManager = SessionManager.continueRecent(sessionDir, piSessionDir);
+      } else {
+        sessionManager = SessionManager.create(sessionDir, piSessionDir);
+      }
+    }
+
+    const currentSessionFile = sessionManager.getSessionFile();
+    if (currentSessionFile && meta.piSessionFile !== currentSessionFile) {
+      meta.piSessionFile = currentSessionFile;
+      await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), "utf8").catch(() => {});
+    }
 
     const result = await this.sessionFactory({
       cwd: sessionDir,
