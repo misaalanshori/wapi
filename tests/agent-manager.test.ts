@@ -126,4 +126,78 @@ describe("AgentSessionManager", () => {
     await manager.getOrCreateSession(sessionId, "chat@s.whatsapp.net");
     expect(mockSessionFactory).toHaveBeenCalledTimes(2);
   });
+
+  it("serializes concurrent messages for the same session in FIFO order", async () => {
+    const executionOrder: string[] = [];
+    const sessionMock: any = {
+      prompt: vi.fn(async (text: string) => {
+        executionOrder.push(`start-${text}`);
+        await new Promise((r) => setTimeout(r, 20));
+        executionOrder.push(`end-${text}`);
+      }),
+      getLastAssistantText: vi.fn().mockReturnValue("Done"),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test-model", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    const sessionId = "uuid-queue-test";
+    const chatJid = "chat-queue@s.whatsapp.net";
+
+    // Launch two concurrent deliverMessage calls for the same session
+    const p1 = manager.deliverMessage(sessionId, chatJid, "msg-1", mockWaLink);
+    const p2 = manager.deliverMessage(sessionId, chatJid, "msg-2", mockWaLink);
+
+    await Promise.all([p1, p2]);
+
+    expect(executionOrder).toEqual([
+      "start-msg-1",
+      "end-msg-1",
+      "start-msg-2",
+      "end-msg-2",
+    ]);
+  });
+
+  it("repeats presence update heartbeat while long prompt is executing", async () => {
+    let promptResolve: () => void;
+    const promptPromise = new Promise<void>((r) => {
+      promptResolve = r;
+    });
+
+    const sessionMock: any = {
+      prompt: vi.fn(async () => {
+        await promptPromise;
+      }),
+      getLastAssistantText: vi.fn().mockReturnValue("Finished long task"),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test-model", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      presenceHeartbeatMs: 25,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    const chatJid = "chat-heartbeat@s.whatsapp.net";
+    const deliverPromise = manager.deliverMessage("uuid-hb", chatJid, "Long query", mockWaLink);
+
+    // Wait for at least 2 heartbeat cycles (60ms)
+    await new Promise((r) => setTimeout(r, 65));
+    expect(mockWaLink.sendPresenceUpdate).toHaveBeenCalledWith(chatJid, "composing");
+    expect(mockWaLink.sendPresenceUpdate.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    promptResolve!();
+    await deliverPromise;
+
+    expect(mockWaLink.sendPresenceUpdate).toHaveBeenLastCalledWith(chatJid, "paused");
+  });
 });

@@ -81,6 +81,7 @@ export interface AgentSessionManagerOptions {
   thinkingLevel?: "off" | "low" | "medium" | "high";
   tz?: string;
   customSystemPrompt?: string;
+  presenceHeartbeatMs?: number;
   schedulerEngine?: SchedulerEngine;
   extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   sessionFactory?: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
@@ -95,12 +96,14 @@ export class AgentSessionManager {
   private readonly thinkingLevel: "off" | "low" | "medium" | "high";
   private readonly tz: string;
   private readonly customSystemPrompt?: string;
+  private readonly presenceHeartbeatMs: number;
   private readonly schedulerEngine?: SchedulerEngine;
   private readonly extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   private readonly sessionFactory: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
   private readonly formatPreamble?: (infoOrJid: any, sessionId?: string) => string;
 
   private readonly liveSessions = new Map<string, AgentSession>();
+  private readonly sessionQueues = new Map<string, Promise<any>>();
 
   constructor(options: AgentSessionManagerOptions) {
     this.dataDir = options.dataDir;
@@ -110,6 +113,7 @@ export class AgentSessionManager {
     this.thinkingLevel = options.thinkingLevel ?? "medium";
     this.tz = options.tz || "Asia/Jakarta";
     this.customSystemPrompt = options.customSystemPrompt;
+    this.presenceHeartbeatMs = options.presenceHeartbeatMs ?? 7000;
     this.schedulerEngine = options.schedulerEngine;
     this.extensionFactories = options.extensionFactories;
     this.sessionFactory = options.sessionFactory ?? createAgentSession;
@@ -238,10 +242,43 @@ export class AgentSessionManager {
     images?: ImageContent[],
     preambleInfo?: Partial<SessionPreambleInfo>
   ): Promise<string | null> {
-    const session = await this.getOrCreateSession(sessionId, chatJid, preambleInfo);
+    const previous = this.sessionQueues.get(sessionId) || Promise.resolve();
 
-    await waLink.sendPresenceUpdate(chatJid, "composing");
+    const currentTask = (async () => {
+      try {
+        await previous;
+      } catch {
+        // Ignore previous turn failure to avoid blocking subsequent turns
+      }
+      return this._executeDeliverMessage(sessionId, chatJid, text, waLink, images, preambleInfo);
+    })();
+
+    this.sessionQueues.set(sessionId, currentTask);
+
     try {
+      return await currentTask;
+    } finally {
+      if (this.sessionQueues.get(sessionId) === currentTask) {
+        this.sessionQueues.delete(sessionId);
+      }
+    }
+  }
+
+  private async _executeDeliverMessage(
+    sessionId: string,
+    chatJid: string,
+    text: string,
+    waLink: WhatsAppLink | { sendPresenceUpdate: (chatJid: string, presence: any) => Promise<any>; sendMessage: (chatJid: string, text: string) => Promise<any> },
+    images?: ImageContent[],
+    preambleInfo?: Partial<SessionPreambleInfo>
+  ): Promise<string | null> {
+    await waLink.sendPresenceUpdate(chatJid, "composing");
+    const heartbeat = setInterval(() => {
+      waLink.sendPresenceUpdate(chatJid, "composing").catch(() => {});
+    }, this.presenceHeartbeatMs);
+
+    try {
+      const session = await this.getOrCreateSession(sessionId, chatJid, preambleInfo);
       const promptOptions: any = { streamingBehavior: "followUp" };
       if (images && images.length > 0) {
         promptOptions.images = images;
@@ -258,6 +295,7 @@ export class AgentSessionManager {
       }
       return null;
     } finally {
+      clearInterval(heartbeat);
       await waLink.sendPresenceUpdate(chatJid, "paused");
     }
   }
