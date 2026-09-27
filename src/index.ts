@@ -145,6 +145,9 @@ export async function main() {
           participantCount,
           mentionedJids: msg.mentionedJids,
           botJid: waLink.getBotUserJid(),
+          botLid: waLink.getBotLid(),
+          botJids: waLink.getBotJids(),
+          text: msg.text,
         });
 
       if (!addressed) {

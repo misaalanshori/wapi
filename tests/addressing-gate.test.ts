@@ -58,4 +58,38 @@ describe("isMessageAddressed", () => {
     });
     expect(result).toBe(true);
   });
+
+  it("matches bot LID in mentionedJids", () => {
+    const result = isMessageAddressed({
+      chatJid: "12345-67890@g.us",
+      isGroup: true,
+      participantCount: 4,
+      mentionedJids: ["59652867924008:9@lid"],
+      botJid: "1234567890:1@s.whatsapp.net",
+      botLid: "59652867924008@lid",
+    });
+    expect(result).toBe(true);
+  });
+
+  it("matches literal @bot or @<phone> in message text", () => {
+    const result = isMessageAddressed({
+      chatJid: "12345-67890@g.us",
+      isGroup: true,
+      participantCount: 4,
+      mentionedJids: [],
+      botJid: "1234567890@s.whatsapp.net",
+      text: "@bot introduce yourself",
+    });
+    expect(result).toBe(true);
+
+    const resultPhone = isMessageAddressed({
+      chatJid: "12345-67890@g.us",
+      isGroup: true,
+      participantCount: 4,
+      mentionedJids: [],
+      botJid: "1234567890@s.whatsapp.net",
+      text: "@1234567890 hello",
+    });
+    expect(resultPhone).toBe(true);
+  });
 });

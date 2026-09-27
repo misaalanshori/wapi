@@ -101,6 +101,18 @@ export class WhatsAppLink {
     return jidNormalizedUser(this.socket.user.id);
   }
 
+  getBotLid(): string | null {
+    if (!(this.socket?.user as any)?.lid) return null;
+    return jidNormalizedUser((this.socket!.user as any).lid);
+  }
+
+  getBotJids(): string[] {
+    const list: string[] = [];
+    if (this.socket?.user?.id) list.push(jidNormalizedUser(this.socket.user.id));
+    if ((this.socket?.user as any)?.lid) list.push(jidNormalizedUser((this.socket!.user as any).lid));
+    return list;
+  }
+
   async start(): Promise<void> {
     this.isStopping = false;
     await fs.mkdir(this.authDir, { recursive: true });
