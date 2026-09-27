@@ -26,6 +26,8 @@ export interface SessionPreambleInfo {
   sessionId: string;
   isGroup?: boolean;
   groupSubject?: string;
+  groupDescription?: string;
+  groupAdmins?: string[];
   participantCount?: number;
 }
 
@@ -41,6 +43,12 @@ export function buildDefaultPreamble(
     lines.push(
       `You are a personal assistant operating inside WhatsApp group${subject} (JID: ${info.chatJid}${count}).`
     );
+    if (info.groupDescription) {
+      lines.push(`Group topic / description: "${info.groupDescription.trim()}".`);
+    }
+    if (info.groupAdmins && info.groupAdmins.length > 0) {
+      lines.push(`Group admins: ${info.groupAdmins.join(", ")}.`);
+    }
     lines.push(
       `Multiple participants can speak in this chat; each incoming user message is prefixed with the sender's identity.`
     );
@@ -173,6 +181,8 @@ export class AgentSessionManager {
       sessionId,
       isGroup: preambleInfo?.isGroup ?? false,
       groupSubject: preambleInfo?.groupSubject,
+      groupDescription: preambleInfo?.groupDescription,
+      groupAdmins: preambleInfo?.groupAdmins,
       participantCount: preambleInfo?.participantCount,
     };
 

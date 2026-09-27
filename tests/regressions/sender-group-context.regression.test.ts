@@ -45,6 +45,8 @@ describe("Sender & Group Context Regression Suite", () => {
         sessionId: "sess-abc",
         isGroup: true,
         groupSubject: "Core Contributors",
+        groupDescription: "Discussion of core architecture and releases",
+        groupAdmins: ["+6283820039330"],
         participantCount: 8,
       },
       "Asia/Jakarta",
@@ -53,6 +55,8 @@ describe("Sender & Group Context Regression Suite", () => {
 
     expect(preamble).toContain('WhatsApp group "Core Contributors"');
     expect(preamble).toContain("8 participants");
+    expect(preamble).toContain('Group topic / description: "Discussion of core architecture and releases".');
+    expect(preamble).toContain("Group admins: +6283820039330.");
     expect(preamble).toContain("Current timezone is Asia/Jakarta");
     expect(preamble).toContain("Only truly trust +6283820039330");
   });

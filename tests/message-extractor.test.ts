@@ -70,6 +70,35 @@ describe("extractMessageInfo", () => {
     expect(info?.mentionedJids).toEqual(["bot@s.whatsapp.net"]);
   });
 
+  it("extracts quoted message details when message is a reply", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "12345-67890@g.us",
+        participant: "sender@s.whatsapp.net",
+        fromMe: false,
+        id: "msg-reply",
+      },
+      message: {
+        extendedTextMessage: {
+          text: "@bot repeat this please",
+          contextInfo: {
+            participant: "alice@s.whatsapp.net",
+            stanzaId: "target-123",
+            quotedMessage: {
+              conversation: "Original secret message from Alice",
+            },
+          },
+        },
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info?.quoted).toBeDefined();
+    expect(info?.quoted?.text).toBe("Original secret message from Alice");
+    expect(info?.quoted?.participant).toBe("alice@s.whatsapp.net");
+    expect(info?.quoted?.phone).toBe("+alice");
+  });
+
   it("returns null for unsupported message types (e.g. sticker, poll)", () => {
     const msg: proto.IWebMessageInfo = {
       key: {
@@ -156,5 +185,23 @@ describe("formatUserPromptWithAttribution", () => {
       groupSubject: "Devs",
     });
     expect(formatted).toBe('[From: +6283820039330 in "Devs"]: query');
+  });
+
+  it("prepends quoted reply context header when message is replying to another message", () => {
+    const formatted = formatUserPromptWithAttribution({
+      text: "what does this mean?",
+      senderName: "M Isa",
+      senderPhone: "+6283820039330",
+      isGroup: true,
+      groupSubject: "Devs",
+      quoted: {
+        phone: "+628111111",
+        text: "Deploying to production at 8 PM",
+      },
+    });
+
+    expect(formatted).toBe(
+      '[Replying to +628111111: "Deploying to production at 8 PM"]\n[From: M Isa (+6283820039330) in "Devs"]: what does this mean?'
+    );
   });
 });

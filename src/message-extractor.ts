@@ -2,6 +2,13 @@ import type { proto } from "@whiskeysockets/baileys";
 
 export type MessageKind = "text" | "image" | "audio";
 
+export interface QuotedMessageInfo {
+  stanzaId?: string;
+  participant?: string;
+  phone?: string;
+  text?: string;
+}
+
 export interface ExtractedMessage {
   chatJid: string;
   senderJid: string;
@@ -12,6 +19,7 @@ export interface ExtractedMessage {
   kind: MessageKind;
   text: string;
   mentionedJids: string[];
+  quoted?: QuotedMessageInfo;
   rawMessage?: proto.IWebMessageInfo;
   mediaInfo?: {
     mimeType: string;
@@ -68,6 +76,30 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
     senderPhone = `+${userPart}`;
   }
 
+  const contextInfo =
+    m.extendedTextMessage?.contextInfo ??
+    m.imageMessage?.contextInfo ??
+    m.audioMessage?.contextInfo ??
+    (m as any).buttonsResponseMessage?.contextInfo ??
+    (m as any).listResponseMessage?.contextInfo;
+
+  let quoted: QuotedMessageInfo | undefined;
+  if (contextInfo?.quotedMessage) {
+    const quotedText = extractMessageText({ message: contextInfo.quotedMessage } as any) ?? "";
+    const quotedParticipant = contextInfo.participant;
+    let quotedPhone: string | undefined;
+    if (quotedParticipant) {
+      const uPart = quotedParticipant.split("@")[0].split(":")[0];
+      quotedPhone = `+${uPart}`;
+    }
+    quoted = {
+      stanzaId: contextInfo.stanzaId ?? undefined,
+      participant: quotedParticipant ?? undefined,
+      phone: quotedPhone,
+      text: quotedText,
+    };
+  }
+
   // 1. Text message
   const textContent =
     m.conversation ??
@@ -76,10 +108,6 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
     (m as any).listResponseMessage?.singleSelectReply?.selectedRowId ??
     (m as any).templateButtonReplyMessage?.selectedId;
   if (textContent !== undefined && textContent !== null && textContent.trim().length > 0) {
-    const contextInfo =
-      m.extendedTextMessage?.contextInfo ??
-      (m as any).buttonsResponseMessage?.contextInfo ??
-      (m as any).listResponseMessage?.contextInfo;
     const mentionedJids = contextInfo?.mentionedJid ?? [];
     return {
       chatJid,
@@ -91,6 +119,7 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       kind: "text",
       text: textContent,
       mentionedJids: mentionedJids.filter(Boolean) as string[],
+      quoted,
       rawMessage: msg,
     };
   }
@@ -109,6 +138,7 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       kind: "image",
       text: caption,
       mentionedJids: mentionedJids.filter(Boolean) as string[],
+      quoted,
       rawMessage: msg,
       mediaInfo: {
         mimeType: m.imageMessage.mimetype ?? "image/jpeg",
@@ -147,6 +177,8 @@ export interface UserPromptAttributionParams {
   senderPhone?: string;
   isGroup: boolean;
   groupSubject?: string;
+  quoted?: QuotedMessageInfo;
+  ambientContext?: string;
 }
 
 export function formatUserPromptWithAttribution(params: UserPromptAttributionParams): string {
@@ -164,5 +196,16 @@ export function formatUserPromptWithAttribution(params: UserPromptAttributionPar
       : " in group"
     : "";
 
-  return `[From: ${identity}${groupPart}]: ${params.text}`;
+  let prefix = "";
+  if (params.ambientContext) {
+    prefix += `${params.ambientContext}\n\n`;
+  }
+
+  if (params.quoted) {
+    const quotedAuthor = params.quoted.phone || params.quoted.participant || "someone";
+    const quotedSnippet = params.quoted.text ? `"${params.quoted.text}"` : "[media / non-text]";
+    prefix += `[Replying to ${quotedAuthor}: ${quotedSnippet}]\n`;
+  }
+
+  return `${prefix}[From: ${identity}${groupPart}]: ${params.text}`;
 }

@@ -92,4 +92,17 @@ describe("isMessageAddressed", () => {
     });
     expect(resultPhone).toBe(true);
   });
+
+  it("is addressed when message is a reply to the bot in a group", () => {
+    const result = isMessageAddressed({
+      chatJid: "12345-67890@g.us",
+      isGroup: true,
+      participantCount: 10,
+      mentionedJids: [],
+      quotedParticipant: "1234567890:1@s.whatsapp.net",
+      botJid: "1234567890@s.whatsapp.net",
+      text: "yes please do that",
+    });
+    expect(result).toBe(true);
+  });
 });

@@ -5,6 +5,7 @@ export interface AddressingGateInput {
   isGroup: boolean;
   participantCount: number;
   mentionedJids: string[];
+  quotedParticipant?: string | null;
   botJid?: string | null;
   botLid?: string | null;
   botJids?: string[];
@@ -39,6 +40,14 @@ export function isMessageAddressed(input: AddressingGateInput): boolean {
   // If no bot identifiers known, cannot match
   if (targetBotJids.length === 0) {
     return false;
+  }
+
+  // 0. Check if this is a direct swipe-to-reply to a bot message
+  if (input.quotedParticipant) {
+    const normQuoted = jidNormalizedUser(input.quotedParticipant);
+    if (targetBotJids.includes(normQuoted)) {
+      return true;
+    }
   }
 
   // 1. Check native WhatsApp mentions

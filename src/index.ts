@@ -15,6 +15,7 @@ import { SchedulerEngine } from "./scheduler-engine.js";
 import { MediaManager } from "./media-manager.js";
 import { isMessageAddressed } from "./addressing-gate.js";
 import { formatUserPromptWithAttribution } from "./message-extractor.js";
+import { ChatHistoryBuffer } from "./chat-history-buffer.js";
 
 export async function main() {
   const config = loadConfig();
@@ -105,9 +106,19 @@ export async function main() {
   const echoTracker = new EchoTracker();
   const authDir = path.join(config.dataDir, "baileys-auth");
   const mediaManager = new MediaManager({ dataDir: config.dataDir });
+  const chatHistoryBuffer = new ChatHistoryBuffer(15);
 
   // Group metadata cache (5 min TTL)
-  const groupMetadataCache = new Map<string, { count: number; subject?: string; expiresAt: number }>();
+  const groupMetadataCache = new Map<
+    string,
+    {
+      count: number;
+      subject?: string;
+      description?: string;
+      admins?: string[];
+      expiresAt: number;
+    }
+  >();
 
   waLink = new WhatsAppLink({
     authDir,
@@ -121,6 +132,8 @@ export async function main() {
       const isGroup = Boolean(isJidGroup(msg.chatJid));
       let participantCount = 2;
       let groupSubject: string | undefined;
+      let groupDescription: string | undefined;
+      let groupAdmins: string[] | undefined;
 
       if (isGroup) {
         const cached = groupMetadataCache.get(msg.chatJid);
@@ -128,14 +141,23 @@ export async function main() {
         if (cached && cached.expiresAt > now) {
           participantCount = cached.count;
           groupSubject = cached.subject;
+          groupDescription = cached.description;
+          groupAdmins = cached.admins;
         } else {
           try {
             const meta = await sock.groupMetadata(msg.chatJid);
             participantCount = meta.participants?.length ?? 3;
             groupSubject = meta.subject;
+            groupDescription = meta.desc ? meta.desc.toString() : undefined;
+            groupAdmins = meta.participants
+              ?.filter((p: any) => p.admin)
+              ?.map((p: any) => p.id.split("@")[0].split(":")[0])
+              ?.map((pn: string) => `+${pn}`);
             groupMetadataCache.set(msg.chatJid, {
               count: participantCount,
               subject: groupSubject,
+              description: groupDescription,
+              admins: groupAdmins,
               expiresAt: now + 300_000,
             });
           } catch (err) {
@@ -153,6 +175,7 @@ export async function main() {
           isGroup,
           participantCount,
           mentionedJids: msg.mentionedJids,
+          quotedParticipant: msg.quoted?.participant,
           botJid: waLink.getBotUserJid(),
           botLid: waLink.getBotLid(),
           botJids: waLink.getBotJids(),
@@ -160,6 +183,13 @@ export async function main() {
         });
 
       if (!addressed) {
+        if (isGroup && registry.findActiveByChatJid(msg.chatJid) && msg.text) {
+          chatHistoryBuffer.push(msg.chatJid, {
+            senderName: msg.senderName,
+            senderPhone: msg.senderPhone,
+            text: msg.text,
+          });
+        }
         logger.debug({ chat: msg.chatJid }, "Message not addressed to assistant; dropped");
         return;
       }
@@ -212,12 +242,16 @@ export async function main() {
             }
           }
 
+          const ambientContext = isGroup ? chatHistoryBuffer.flushFormattedContext(msg.chatJid) : undefined;
+
           const attributedPrompt = formatUserPromptWithAttribution({
             text: promptText,
             senderName: msg.senderName,
             senderPhone: msg.senderPhone,
             isGroup,
             groupSubject,
+            quoted: msg.quoted,
+            ambientContext,
           });
 
           await agentManager.deliverMessage(
@@ -226,7 +260,7 @@ export async function main() {
             attributedPrompt,
             waLink,
             images,
-            { isGroup, groupSubject, participantCount }
+            { isGroup, groupSubject, groupDescription, groupAdmins, participantCount }
           );
         } catch (err) {
           logger.error({ err, sessionId: decision.sessionId }, "Error delivering message to agent");
