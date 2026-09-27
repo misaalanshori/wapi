@@ -144,3 +144,11 @@
 - [x] Implemented 1:3 Head-to-Tail preservation sandwich instructions, keeping ~60k tokens of verbatim tail and foundational head goals intact
 - [x] Integrated background compaction queue into `AgentSessionManager` ensuring zero mid-turn collision
 - [x] Regression test suite (`intelligent-compaction.regression.test.ts`), all gates green, deployed
+
+---
+
+## Session Status Command (`/session`)
+- [x] Added `/session` command to `SessionGatekeeper` mirroring Pi TUI's session inspection
+- [x] Implemented `AgentSessionManager.getSessionStatusSummary` querying native Pi `session.getSessionStats()` and `session.getContextUsage()`
+- [x] Displays active context token usage, total prompt volume, cache hit rate, token counts, cost estimate, and active schedules
+- [x] Unit tests and regression suite green, deployed

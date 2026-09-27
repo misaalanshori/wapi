@@ -131,3 +131,10 @@
   - `src/agent-session-manager.ts`: Runs background compaction serialized onto `sessionQueues` without collision.
   - Added unit tests in `tests/compaction-coordinator.test.ts` and regression tests in `tests/regressions/intelligent-compaction.regression.test.ts`.
   - All 36 test files, 144 tests passing. Deployed to Docker.
+
+## 2026-09-27 — WhatsApp /session Status Command
+- Implemented `/session` command mirroring Pi TUI's session inspection:
+  - `src/session-gatekeeper.ts`: Intercepts `/session` in active chats and invokes `onSessionStatus`.
+  - `src/agent-session-manager.ts`: Implemented `getSessionStatusSummary` querying native Pi `session.getSessionStats()` and `session.getContextUsage()`.
+  - Formats clean WhatsApp response showing: Session ID, active model, timezone, message counts (user/assistant/tools), active context tokens and percentage, prompt token volume with cache hit rate, output tokens, cost in USD, and active schedules.
+  - All 36 test files, 147 tests passing. Deployed to Docker.
