@@ -126,6 +126,13 @@ export class AgentSessionManager {
     this.defaultSender = options.defaultSender;
     this.presenceHeartbeatMs = options.presenceHeartbeatMs ?? 7000;
     if (options.compactionConfig) {
+      const tailRatio = options.compactionConfig.tailRatio;
+      const headRatio = options.compactionConfig.headRatio;
+      const tailBudget = Math.round(
+        options.compactionConfig.targetTokens * (tailRatio / Math.max(1, headRatio + tailRatio))
+      );
+      this.initSharedSettings(this.sharedAgentDir, tailBudget);
+
       this.compactionCoordinator = new CompactionCoordinator({
         ...options.compactionConfig,
         onCompact: async (sessionId, instructions) => {
@@ -137,6 +144,27 @@ export class AgentSessionManager {
     this.extensionFactories = options.extensionFactories;
     this.sessionFactory = options.sessionFactory ?? createAgentSession;
     this.formatPreamble = options.formatPreamble;
+  }
+
+  private async initSharedSettings(sharedAgentDir: string, keepRecentTokens: number): Promise<void> {
+    try {
+      await fs.mkdir(sharedAgentDir, { recursive: true });
+      const settingsPath = path.join(sharedAgentDir, "settings.json");
+      let currentSettings: any = {};
+      try {
+        const raw = await fs.readFile(settingsPath, "utf8");
+        currentSettings = JSON.parse(raw);
+      } catch {
+        // no settings file yet
+      }
+      currentSettings.compaction = {
+        ...currentSettings.compaction,
+        keepRecentTokens,
+      };
+      await fs.writeFile(settingsPath, JSON.stringify(currentSettings, null, 2), "utf8");
+    } catch {
+      // non-fatal
+    }
   }
 
   getSessionDir(sessionId: string): string {

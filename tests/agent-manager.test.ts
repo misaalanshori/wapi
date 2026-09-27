@@ -46,6 +46,31 @@ describe("AgentSessionManager", () => {
     expect(await manager.sessionExistsOnDisk("uuid-123")).toBe(true);
   });
 
+  it("writes keepRecentTokens to sharedAgentDir settings.json based on compactionConfig", async () => {
+    const sharedAgentDir = path.join(tmpDir, "agent-home");
+    new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir,
+      model: {} as any,
+      modelRuntime: {} as any,
+      sessionFactory: mockSessionFactory,
+      compactionConfig: {
+        softLimitTokens: 150000,
+        idleMinutes: 15,
+        targetTokens: 80000,
+        headRatio: 1,
+        tailRatio: 3,
+      },
+    });
+
+    // Wait a brief tick for async file write
+    await new Promise((r) => setTimeout(r, 20));
+
+    const settingsRaw = await fs.readFile(path.join(sharedAgentDir, "settings.json"), "utf8");
+    const settings = JSON.parse(settingsRaw);
+    expect(settings.compaction.keepRecentTokens).toBe(60000); // 80k * (3 / 4)
+  });
+
   it("creates session directory structure and initializes agent session", async () => {
     const manager = new AgentSessionManager({
       dataDir: tmpDir,
