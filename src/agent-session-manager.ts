@@ -8,6 +8,8 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { WhatsAppLink } from "./whatsapp-link.js";
 
+import { registerSqliteStorageTool } from "./sqlite-storage.js";
+
 export interface AgentSessionManagerOptions {
   dataDir: string;
   sharedAgentDir: string;
@@ -86,7 +88,14 @@ export class AgentSessionManager {
       await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), "utf8");
     }
 
-    const factories = this.extensionFactories ? this.extensionFactories(sessionDir, sessionId) : [];
+    const defaultFactories = [
+      registerSqliteStorageTool(
+        path.join(sessionDir, "storage.sqlite"),
+        path.join(sessionDir, "storage-backups")
+      ),
+    ];
+    const customFactories = this.extensionFactories ? this.extensionFactories(sessionDir, sessionId) : [];
+    const factories = [...defaultFactories, ...customFactories];
     const preambleText = this.formatPreamble
       ? this.formatPreamble(chatJid, sessionId)
       : `You are a personal assistant operating inside WhatsApp for chat ${chatJid}.`;

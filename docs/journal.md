@@ -22,3 +22,13 @@
   - `tests/core-loop.integration.test.ts`: End-to-end integration test verifying addressing -> init -> chat -> deinit -> resume.
   - Driven verification: Tested startup with invalid model ID, verifying fast-fail before QR display.
   - All gates green: `check:types`, `test` (45 tests passing), `build`.
+
+## 2025-09-27 — Phase 2 Complete
+- Implemented Phase 2 via TDD:
+  - `src/sqlite-storage.ts`: `SqliteStorageService` supporting `schema`, `all`, `run`, `exec`, `backup`.
+  - Safety rails: WAL mode, busy timeout 5000ms, auto-backup before destructive SQL (`DROP TABLE`, `DELETE FROM` without WHERE, `ALTER TABLE ... DROP COLUMN`), backup pruning to maxBackups (default 10), result truncation (200 rows / 8000 chars).
+  - Pi extension tool registration: `registerSqliteStorageTool` exposing the `sqlite_storage` tool.
+  - Pi Skill file: `pi-agent-home/skills/sqlite-storage/SKILL.md` specifying database design habits, schema inspection, and upsert usage.
+  - Wired into `AgentSessionManager` to register `sqlite_storage` on each session's own private `storage.sqlite`.
+  - Driven verification: Tested table creation, parameterized queries, row count reporting, and auto-backup creation on disk.
+  - All gates green: `check:types`, `test` (56 tests passing), `build`.

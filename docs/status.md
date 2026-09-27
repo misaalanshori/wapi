@@ -38,13 +38,13 @@
 - [x] Phase 1 test suite passing
 
 ### Phase 2: Memory
-- [ ] `sqlite_storage` tool implementation (§8.4)
+- [x] `sqlite_storage` tool implementation (§8.4)
   - `schema`, `all`, `run`, `exec`, `backup` actions
   - Auto-backup on destructive statements (pruned to last N)
   - Result row & character truncation limits
   - WAL mode & busy timeout
-- [ ] Skill file at `pi-agent-home/skills/sqlite-storage/SKILL.md` (§8.4)
-- [ ] Phase 2 test suite passing
+- [x] Skill file at `pi-agent-home/skills/sqlite-storage/SKILL.md` (§8.4)
+- [x] Phase 2 test suite passing
 
 ### Phase 3: Scheduler
 - [ ] Schedules database (`schedules.sqlite`) per session (§8.5.2)

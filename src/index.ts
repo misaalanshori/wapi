@@ -28,6 +28,17 @@ export async function main() {
   await fs.mkdir(config.dataDir, { recursive: true });
 
   const agentHomeDir = path.join(config.dataDir, "pi-agent-home");
+
+  // Copy bundled skills to agentHomeDir if present
+  try {
+    const bundledSkillsDir = path.resolve("pi-agent-home/skills");
+    const targetSkillsDir = path.join(agentHomeDir, "skills");
+    await fs.mkdir(targetSkillsDir, { recursive: true });
+    await fs.cp(bundledSkillsDir, targetSkillsDir, { recursive: true });
+  } catch (err) {
+    logger.debug({ err }, "No bundled skills copied");
+  }
+
   logger.info("Initializing Pi model runtime and checking model availability...");
   const { modelRuntime, model } = await initModelRuntime({
     provider: config.provider,
