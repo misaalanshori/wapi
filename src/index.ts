@@ -17,6 +17,7 @@ import { isMessageAddressed } from "./addressing-gate.js";
 
 export async function main() {
   const config = loadConfig();
+  process.env.TZ = config.tz;
 
   const logger = pino({
     level: config.logLevel,
@@ -84,6 +85,7 @@ export async function main() {
     model,
     modelRuntime,
     thinkingLevel: config.thinkingLevel,
+    tz: config.tz,
     schedulerEngine: scheduler,
   });
 

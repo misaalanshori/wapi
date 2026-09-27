@@ -50,7 +50,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     providerApiKey: providerApiKey!,
     providerModelId: providerModelId!,
     dataDir: env.DATA_DIR?.trim() || "/data",
-    tz: env.TZ?.trim() || "UTC",
+    tz: env.TZ?.trim() || "Asia/Jakarta",
     logLevel: env.LOG_LEVEL?.trim() || "info",
     thinkingLevel,
     minScheduleIntervalSeconds,

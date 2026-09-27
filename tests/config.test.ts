@@ -34,7 +34,7 @@ describe("loadConfig", () => {
     expect(config.providerApiKey).toBe("oc_test_key");
     expect(config.providerModelId).toBe("claude-3-7-sonnet");
     expect(config.dataDir).toBe("/data");
-    expect(config.tz).toBe("UTC");
+    expect(config.tz).toBe("Asia/Jakarta");
     expect(config.logLevel).toBe("info");
     expect(config.thinkingLevel).toBe("medium");
     expect(config.minScheduleIntervalSeconds).toBe(60);

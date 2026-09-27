@@ -13,7 +13,7 @@ import { registerScheduleTool } from "./schedule-tool.js";
 import type { SchedulerEngine } from "./scheduler-engine.js";
 
 import { chunkMessage } from "./message-chunker.js";
-import { defaultTimeAwareExtension, stripTimeAwareTags } from "pi-time-aware";
+import { createTimeAwareExtension, stripTimeAwareTags } from "pi-time-aware";
 
 export interface ImageContent {
   type: "image";
@@ -27,6 +27,7 @@ export interface AgentSessionManagerOptions {
   model: any;
   modelRuntime: any;
   thinkingLevel?: "off" | "low" | "medium" | "high";
+  tz?: string;
   schedulerEngine?: SchedulerEngine;
   extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   sessionFactory?: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
@@ -39,6 +40,7 @@ export class AgentSessionManager {
   private readonly model: any;
   private readonly modelRuntime: any;
   private readonly thinkingLevel: "off" | "low" | "medium" | "high";
+  private readonly tz: string;
   private readonly schedulerEngine?: SchedulerEngine;
   private readonly extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   private readonly sessionFactory: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
@@ -52,6 +54,7 @@ export class AgentSessionManager {
     this.model = options.model;
     this.modelRuntime = options.modelRuntime;
     this.thinkingLevel = options.thinkingLevel ?? "medium";
+    this.tz = options.tz || "Asia/Jakarta";
     this.schedulerEngine = options.schedulerEngine;
     this.extensionFactories = options.extensionFactories;
     this.sessionFactory = options.sessionFactory ?? createAgentSession;
@@ -107,7 +110,7 @@ export class AgentSessionManager {
         path.join(sessionDir, "storage.sqlite"),
         path.join(sessionDir, "storage-backups")
       ),
-      defaultTimeAwareExtension,
+      createTimeAwareExtension({ timeZone: this.tz }),
     ];
 
     if (this.schedulerEngine) {
