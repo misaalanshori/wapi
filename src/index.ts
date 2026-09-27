@@ -136,13 +136,16 @@ export async function main() {
         }
       }
 
-      const addressed = isMessageAddressed({
-        chatJid: msg.chatJid,
-        isGroup,
-        participantCount,
-        mentionedJids: msg.mentionedJids,
-        botJid: waLink.getBotUserJid(),
-      });
+      const isInitAttempt = /^(?:@\S+\s+)?\/init-session\b/i.test(msg.text.trim());
+      const addressed =
+        isInitAttempt ||
+        isMessageAddressed({
+          chatJid: msg.chatJid,
+          isGroup,
+          participantCount,
+          mentionedJids: msg.mentionedJids,
+          botJid: waLink.getBotUserJid(),
+        });
 
       if (!addressed) {
         logger.debug({ chat: msg.chatJid }, "Message not addressed to assistant; dropped");

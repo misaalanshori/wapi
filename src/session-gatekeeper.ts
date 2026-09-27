@@ -49,6 +49,7 @@ export class SessionGatekeeper {
   }): Promise<GatekeeperDecision> {
     const kind: MessageKind = msg.kind ?? "text";
     const trimmed = msg.text.trim();
+    const cleanCommand = trimmed.replace(/^@\S+\s*/, "").trim();
     const activeSession = this.registry.findActiveByChatJid(msg.chatJid);
 
     if (!activeSession) {
@@ -57,7 +58,7 @@ export class SessionGatekeeper {
         return { type: "drop" };
       }
 
-      const match = trimmed.match(this.initRegex);
+      const match = cleanCommand.match(this.initRegex);
       if (!match) {
         return { type: "drop" };
       }
@@ -113,7 +114,7 @@ export class SessionGatekeeper {
       };
     }
 
-    if (/^\/deinit-session$/i.test(trimmed)) {
+    if (/^\/deinit-session$/i.test(cleanCommand)) {
       this.registry.pauseSession(activeSession.id);
       if (this.onSessionPaused) {
         await this.onSessionPaused(activeSession.id);
@@ -125,7 +126,7 @@ export class SessionGatekeeper {
       };
     }
 
-    if (/^\/init-session(\s+.*)?$/i.test(trimmed)) {
+    if (/^\/init-session(\s+.*)?$/i.test(cleanCommand)) {
       return {
         type: "reply",
         text: `already active. Session ID: ${activeSession.id}`,
