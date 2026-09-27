@@ -191,10 +191,19 @@ export async function main() {
 
       if (!addressed) {
         if (isGroup && registry.findActiveByChatJid(msg.chatJid) && msg.text) {
+          let replyTo: { author?: string; text?: string } | undefined;
+          if (msg.quoted) {
+            replyTo = {
+              author: msg.quoted.phone || (msg.quoted.lid ? `@${msg.quoted.lid}` : msg.quoted.participant),
+              text: msg.quoted.text,
+            };
+          }
           chatHistoryBuffer.push(msg.chatJid, {
             senderName: msg.senderName,
             senderPhone: msg.senderPhone,
+            senderLid: msg.senderLid,
             text: msg.text,
+            replyTo,
           });
         }
         logger.debug({ chat: msg.chatJid }, "Message not addressed to assistant; dropped");

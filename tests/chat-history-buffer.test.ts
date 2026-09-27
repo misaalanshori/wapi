@@ -36,4 +36,26 @@ describe("ChatHistoryBuffer", () => {
     expect(formatted).toBeDefined();
     expect(formatted).toContain("A".repeat(197) + "...");
   });
+
+  it("includes replyTo context in ambient message line when a message was replying to someone else", () => {
+    const buffer = new ChatHistoryBuffer(5);
+    buffer.push("chat-3", {
+      senderName: "Liyan",
+      text: "Can I ask the AI something?",
+    });
+    buffer.push("chat-3", {
+      senderName: "M Isa",
+      text: "wkwkw silahkan",
+      replyTo: {
+        author: "Liyan",
+        text: "Can I ask the AI something?",
+      },
+    });
+
+    const formatted = buffer.flushFormattedContext("chat-3");
+    expect(formatted).toBeDefined();
+    expect(formatted).toContain(
+      '- M Isa (replying to Liyan: "Can I ask the AI something?"): wkwkw silahkan'
+    );
+  });
 });
