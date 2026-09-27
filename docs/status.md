@@ -104,8 +104,8 @@
 ---
 
 ## Conversational Context, Replies & Group Situational Awareness (docs/conversational-context-and-replies-plan.md)
-- [ ] Phase R1: Quoted message extraction & reply-to-bot addressing
-- [ ] Phase R2: Quoted message prompt attribution envelope
-- [ ] Phase R3: Rolling ambient group chatter buffer (last 15 messages)
-- [ ] Phase R4: Group roster & topic/description in session preamble
-- [ ] Phase R5: Verification, regression suite, and deployment
+- [x] Phase R1: Quoted message extraction & reply-to-bot addressing
+- [x] Phase R2: Quoted message prompt attribution envelope
+- [x] Phase R3: Rolling ambient group chatter buffer (last 15 messages)
+- [x] Phase R4: Group roster & topic/description in session preamble
+- [x] Phase R5: Verification, regression suite, and deployment

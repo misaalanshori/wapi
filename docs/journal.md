@@ -84,3 +84,9 @@
   - Rolling ambient group chatter buffer: maintaining bounded in-memory ring buffer (last 15 messages) of group chatter to give situational awareness when called.
   - Group roster & topic/description: enriching session preamble with group topic and admin list from `groupMetadata`.
   - Phased TDD implementation strategy across 5 phases (R1–R5).
+  - Completed all phases R1–R5:
+    - Phase R1: Quoted message extraction from Baileys `contextInfo.quotedMessage` and direct reply-to-bot triggering in `isMessageAddressed`.
+    - Phase R2: Formatted `[Replying to <Author>: "<Snippet>"]` in user turn prompts.
+    - Phase R3: Created `ChatHistoryBuffer` capturing ambient unaddressed chatter (bounded 15 items), flushing to prompt on addressed turns.
+    - Phase R4: Cached group description and admin lists in `groupMetadataCache` and injected into `buildDefaultPreamble`.
+    - Phase R5: All 30 test files and 114 tests green, multi-stage Docker image rebuilt and deployed.
