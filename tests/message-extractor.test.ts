@@ -51,20 +51,19 @@ describe("extractMessageInfo", () => {
     expect(info?.mentionedJids).toEqual(["bot@s.whatsapp.net"]);
   });
 
-  it("returns null for non-text messages (e.g. image, sticker, poll)", () => {
+  it("returns null for unsupported message types (e.g. sticker, poll)", () => {
     const msg: proto.IWebMessageInfo = {
       key: {
         remoteJid: "123456789@s.whatsapp.net",
-        id: "msg-media",
+        id: "msg-sticker",
       },
       message: {
-        imageMessage: {
-          caption: "Look at this",
+        stickerMessage: {
+          url: "https://example.com/sticker",
         },
       },
     };
 
-    // As per SRD §8.1: only conversation or extendedTextMessage.text are processed in this core
     const info = extractMessageInfo(msg);
     expect(info).toBeNull();
   });

@@ -61,3 +61,34 @@
 - [x] Dockerfile and docker-compose.yml verification (§10)
 - [x] Acceptance checklist verification (§dev-rules.md)
 - [x] Final report written (`docs/report.md`)
+
+---
+
+## Non-Text Media Phases (docs/media-processing-plan.md)
+
+### Phase M1: Media Extractor & Audio Notice
+- [x] Extend `src/message-extractor.ts` to support `text`, `image`, and `audio` message kinds
+- [x] Extract image captions, mimetypes, and viewOnce wrapped images
+- [x] Extract audio metadata (mimetype, seconds, ptt/voice note)
+- [x] Handle audio notice in `SessionGatekeeper` (polite refusal when active/addressed, silent drop otherwise)
+- [x] Phase M1 test suite passing
+
+### Phase M2: Media Manager & File Persistence
+- [ ] Implement `src/media-manager.ts`
+- [ ] Download media via Baileys `downloadMediaMessage`
+- [ ] Persist files to `sessions/<uuid>/media/<messageId>.<ext>`
+- [ ] Enforce `MAX_MEDIA_PER_SESSION` rolling pruning
+- [ ] Return `{ filePath, base64Data, mimeType }` for model consumption
+- [ ] Phase M2 test suite passing
+
+### Phase M3: Multimodal Prompting Integration
+- [ ] Update `AgentSessionManager.deliverMessage` to accept optional `images?: ImageContent[]`
+- [ ] Pass `images` to `session.prompt(text, { images, streamingBehavior: "followUp" })`
+- [ ] Wire image download and multimodal prompting into `src/index.ts`
+- [ ] Integration test for image message delivery
+- [ ] Phase M3 test suite passing
+
+### Phase M4: Hardening & Regressions
+- [ ] Add regression tests (empty caption fallback, corrupted download handling, voice note in group)
+- [ ] Verify all gates (`check:types`, `vitest run`, `build`, Docker build)
+- [ ] Update `docs/journal.md` and `docs/report.md`

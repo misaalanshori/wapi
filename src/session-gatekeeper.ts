@@ -1,10 +1,18 @@
 import crypto from "crypto";
 import type { SessionRegistry } from "./session-registry.js";
+import type { MessageKind } from "./message-extractor.js";
 
 export type GatekeeperDecision =
   | { type: "drop" }
   | { type: "reply"; text: string; sessionId?: string }
-  | { type: "forward"; sessionId: string; text: string };
+  | {
+      type: "forward";
+      sessionId: string;
+      text: string;
+      kind: MessageKind;
+      rawMessage?: any;
+      mediaInfo?: any;
+    };
 
 export interface SessionGatekeeperOptions {
   secretWord: string;
@@ -35,12 +43,20 @@ export class SessionGatekeeper {
     chatJid: string;
     senderJid: string;
     text: string;
+    kind?: MessageKind;
+    rawMessage?: any;
+    mediaInfo?: any;
   }): Promise<GatekeeperDecision> {
+    const kind: MessageKind = msg.kind ?? "text";
     const trimmed = msg.text.trim();
     const activeSession = this.registry.findActiveByChatJid(msg.chatJid);
 
     if (!activeSession) {
       // Chat is UNINITIALIZED
+      if (kind === "audio") {
+        return { type: "drop" };
+      }
+
       const match = trimmed.match(this.initRegex);
       if (!match) {
         return { type: "drop" };
@@ -73,7 +89,6 @@ export class SessionGatekeeper {
         if (existingRecord) {
           this.registry.resumeSession(providedUuid, msg.chatJid);
         } else {
-          // If on disk from prior run but missing in registry
           this.registry.createSession(providedUuid, msg.chatJid);
         }
 
@@ -90,6 +105,14 @@ export class SessionGatekeeper {
     }
 
     // Chat is ACTIVE
+    if (kind === "audio") {
+      return {
+        type: "reply",
+        text: "Sorry, I cannot understand audio or voice notes yet. Please send a text message or image.",
+        sessionId: activeSession.id,
+      };
+    }
+
     if (/^\/deinit-session$/i.test(trimmed)) {
       this.registry.pauseSession(activeSession.id);
       if (this.onSessionPaused) {
@@ -116,6 +139,9 @@ export class SessionGatekeeper {
       type: "forward",
       sessionId: activeSession.id,
       text: msg.text,
+      kind,
+      rawMessage: msg.rawMessage,
+      mediaInfo: msg.mediaInfo,
     };
   }
 }
