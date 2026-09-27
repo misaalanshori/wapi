@@ -400,6 +400,65 @@ export class AgentSessionManager {
     }
   }
 
+  async getSessionStatusSummary(sessionId: string, chatJid: string): Promise<string> {
+    const session = await this.getOrCreateSession(sessionId, chatJid);
+    const stats =
+      typeof (session as any).getSessionStats === "function"
+        ? (session as any).getSessionStats()
+        : null;
+    const usage =
+      typeof (session as any).getContextUsage === "function"
+        ? (session as any).getContextUsage()
+        : null;
+
+    const lines: string[] = [
+      "*Session Info*",
+      `• ID: \`${sessionId}\``,
+      `• Model: \`${this.model?.provider || "unknown"}/${this.model?.id || "unknown"}\``,
+      `• Timezone: \`${this.tz}\``,
+      "",
+      "*Messages*",
+      `• Total: ${stats?.totalMessages ?? 0} (User: ${stats?.userMessages ?? 0}, Assistant: ${stats?.assistantMessages ?? 0})`,
+      `• Tools: ${stats?.toolCalls ?? 0} calls, ${stats?.toolResults ?? 0} results`,
+      "",
+      "*Context & Tokens*",
+    ];
+
+    if (usage && typeof usage.tokens === "number") {
+      const pct = usage.percent != null ? ` (${usage.percent}%)` : "";
+      lines.push(
+        `• Active Context: ${usage.tokens.toLocaleString("en-US")} / ${usage.contextWindow?.toLocaleString("en-US") ?? "?"} tokens${pct}`
+      );
+    } else {
+      lines.push("• Active Context: Not yet evaluated");
+    }
+
+    const { input = 0, output = 0, cacheRead = 0, cacheWrite = 0 } = stats?.tokens ?? {};
+    const promptTokens = input + cacheRead + cacheWrite;
+    lines.push(`• Prompt Volume: ${promptTokens.toLocaleString("en-US")} tokens`);
+    if (promptTokens > 0 && (cacheRead > 0 || cacheWrite > 0)) {
+      const hitRate = `(${((cacheRead / promptTokens) * 100).toFixed(1)}%)`;
+      lines.push(`  - Cached: ${cacheRead.toLocaleString("en-US")} ${hitRate}`);
+      lines.push(`  - Uncached: ${(input + cacheWrite).toLocaleString("en-US")}`);
+    }
+    lines.push(`• Output: ${output.toLocaleString("en-US")} tokens`);
+
+    if (typeof stats?.cost === "number" && stats.cost > 0) {
+      lines.push(`• Estimated Cost: $${stats.cost.toFixed(4)}`);
+    }
+
+    if (this.schedulerEngine) {
+      try {
+        const scheds = await this.schedulerEngine.listSchedules(sessionId);
+        lines.push("", "*Schedules*", `• Active: ${scheds.length} schedule(s)`);
+      } catch {
+        // ignore
+      }
+    }
+
+    return lines.join("\n");
+  }
+
   async disposeSession(sessionId: string): Promise<void> {
     this.compactionCoordinator?.cancelTimer(sessionId);
     const session = this.liveSessions.get(sessionId);

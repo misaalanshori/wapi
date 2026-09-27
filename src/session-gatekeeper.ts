@@ -20,6 +20,7 @@ export interface SessionGatekeeperOptions {
   sessionExistsOnDisk: (uuid: string) => boolean | Promise<boolean>;
   onSessionPaused?: (sessionId: string) => void | Promise<void>;
   onSessionResumed?: (sessionId: string, chatJid: string) => void | Promise<void>;
+  onSessionStatus?: (sessionId: string, chatJid: string) => Promise<string> | string;
 }
 
 export class SessionGatekeeper {
@@ -28,6 +29,7 @@ export class SessionGatekeeper {
   private readonly sessionExistsOnDisk: (uuid: string) => boolean | Promise<boolean>;
   private readonly onSessionPaused?: (sessionId: string) => void | Promise<void>;
   private readonly onSessionResumed?: (sessionId: string, chatJid: string) => void | Promise<void>;
+  private readonly onSessionStatus?: (sessionId: string, chatJid: string) => Promise<string> | string;
 
   private readonly initRegex = /^\/init-session\s+(\S+)(?:\s+([0-9a-f-]{36}))?$/i;
 
@@ -37,6 +39,7 @@ export class SessionGatekeeper {
     this.sessionExistsOnDisk = options.sessionExistsOnDisk;
     this.onSessionPaused = options.onSessionPaused;
     this.onSessionResumed = options.onSessionResumed;
+    this.onSessionStatus = options.onSessionStatus;
   }
 
   async handleMessage(msg: {
@@ -130,6 +133,22 @@ export class SessionGatekeeper {
       return {
         type: "reply",
         text: `already active. Session ID: ${activeSession.id}`,
+        sessionId: activeSession.id,
+      };
+    }
+
+    if (/^\/session$/i.test(cleanCommand)) {
+      if (this.onSessionStatus) {
+        const text = await this.onSessionStatus(activeSession.id, msg.chatJid);
+        return {
+          type: "reply",
+          text,
+          sessionId: activeSession.id,
+        };
+      }
+      return {
+        type: "reply",
+        text: `Active Session ID: ${activeSession.id}`,
         sessionId: activeSession.id,
       };
     }

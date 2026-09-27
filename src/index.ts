@@ -102,6 +102,9 @@ export async function main() {
     onSessionResumed: async (id) => {
       await scheduler.catchUpSession(id);
     },
+    onSessionStatus: async (sessionId, chatJid) => {
+      return agentManager.getSessionStatusSummary(sessionId, chatJid);
+    },
   });
 
   const echoTracker = new EchoTracker();

@@ -110,6 +110,44 @@ describe("AgentSessionManager", () => {
     expect(mockSessionFactory).toHaveBeenCalledTimes(1);
   });
 
+  it("formats session status summary using Pi session stats and context usage", async () => {
+    const mockStatsSession: any = {
+      getSessionStats: vi.fn().mockReturnValue({
+        totalMessages: 10,
+        userMessages: 4,
+        assistantMessages: 6,
+        toolCalls: 3,
+        toolResults: 3,
+        tokens: { input: 5000, output: 1000, cacheRead: 4000, cacheWrite: 0, total: 6000 },
+        cost: 0.0025,
+      }),
+      getContextUsage: vi.fn().mockReturnValue({
+        tokens: 3500,
+        contextWindow: 1000000,
+        percent: 0.35,
+      }),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "deepseek-v4.1-flash", provider: "opencode-go" } as any,
+      modelRuntime: {} as any,
+      tz: "Asia/Jakarta",
+      sessionFactory: vi.fn().mockResolvedValue({ session: mockStatsSession }),
+    });
+
+    const summary = await manager.getSessionStatusSummary("sess-summary-1", "chat-summary@g.us");
+    expect(summary).toContain("*Session Info*");
+    expect(summary).toContain("sess-summary-1");
+    expect(summary).toContain("opencode-go/deepseek-v4.1-flash");
+    expect(summary).toContain("Asia/Jakarta");
+    expect(summary).toContain("Total: 10");
+    expect(summary).toContain("Active Context: 3,500 / 1,000,000 tokens (0.35%)");
+    expect(summary).toContain("Estimated Cost: $0.0025");
+  });
+
   it("delivers text to agent session, sends composing presence, and sends reply", async () => {
     const manager = new AgentSessionManager({
       dataDir: tmpDir,

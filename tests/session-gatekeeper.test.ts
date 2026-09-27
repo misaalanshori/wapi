@@ -142,6 +142,28 @@ describe("SessionGatekeeper", () => {
       }
     });
 
+    it("returns formatted session status when receiving /session", async () => {
+      const mockStatusHandler = vi.fn().mockResolvedValue("*Session Status*\n• ID: test-session");
+      const gk = new SessionGatekeeper({
+        secretWord: SECRET,
+        registry,
+        sessionExistsOnDisk: () => true,
+        onSessionStatus: mockStatusHandler,
+      });
+
+      const decision = await gk.handleMessage({
+        chatJid,
+        senderJid: "user@s.whatsapp.net",
+        text: "/session",
+      });
+
+      expect(decision.type).toBe("reply");
+      if (decision.type === "reply") {
+        expect(decision.text).toContain("*Session Status*");
+      }
+      expect(mockStatusHandler).toHaveBeenCalledWith(sessionId, chatJid);
+    });
+
     it("forwards normal messages to the agent", async () => {
       const decision = await gatekeeper.handleMessage({
         chatJid,
