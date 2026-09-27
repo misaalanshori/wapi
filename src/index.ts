@@ -111,6 +111,10 @@ export async function main() {
     authDir,
     echoTracker,
     logger,
+    onGroupUpdate: (chatJid) => {
+      groupParticipantCache.delete(chatJid);
+      logger.debug({ chatJid }, "Invalidated group participant cache on group update");
+    },
     onMessage: async (msg, sock) => {
       const isGroup = Boolean(isJidGroup(msg.chatJid));
       let participantCount = 2;

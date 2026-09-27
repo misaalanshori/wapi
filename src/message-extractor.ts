@@ -22,7 +22,9 @@ export function unwrapMessageContent(m: proto.IMessage | null | undefined): prot
   if (!m) return m;
   if (m.viewOnceMessage?.message) return unwrapMessageContent(m.viewOnceMessage.message);
   if (m.viewOnceMessageV2?.message) return unwrapMessageContent(m.viewOnceMessageV2.message);
+  if (m.viewOnceMessageV2Extension?.message) return unwrapMessageContent(m.viewOnceMessageV2Extension.message);
   if (m.ephemeralMessage?.message) return unwrapMessageContent(m.ephemeralMessage.message);
+  if (m.documentWithCaptionMessage?.message) return unwrapMessageContent(m.documentWithCaptionMessage.message);
   return m;
 }
 

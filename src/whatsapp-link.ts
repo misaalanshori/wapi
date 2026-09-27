@@ -1,5 +1,7 @@
 import makeWASocket, {
   useMultiFileAuthState,
+  makeCacheableSignalKeyStore,
+  fetchLatestBaileysVersion,
   generateMessageIDV2,
   jidNormalizedUser,
   DisconnectReason,
@@ -19,6 +21,7 @@ export interface WhatsAppLinkOptions {
   logger: Logger;
   onMessage: (msg: ExtractedMessage, sock: WASocket) => Promise<void> | void;
   onReady?: () => void;
+  onGroupUpdate?: (chatJid: string) => void;
   qrHttpPort?: number;
 }
 
@@ -28,6 +31,7 @@ export class WhatsAppLink {
   private readonly logger: Logger;
   private readonly onMessage: (msg: ExtractedMessage, sock: WASocket) => Promise<void> | void;
   private readonly onReady?: () => void;
+  private readonly onGroupUpdate?: (chatJid: string) => void;
 
   private socket: WASocket | null = null;
   private retryCount = 0;
@@ -40,6 +44,7 @@ export class WhatsAppLink {
     this.logger = options.logger;
     this.onMessage = options.onMessage;
     this.onReady = options.onReady;
+    this.onGroupUpdate = options.onGroupUpdate;
   }
 
   getSocket(): WASocket | null {
@@ -57,8 +62,19 @@ export class WhatsAppLink {
 
     const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
 
+    const { version } = await fetchLatestBaileysVersion().catch(() => ({
+      version: undefined,
+    }));
+
     const sock = makeWASocket({
-      auth: state,
+      version,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(
+          state.keys,
+          this.logger.child({ module: "baileys-keys" }) as any
+        ),
+      },
       logger: this.logger.child({ module: "baileys" }) as any,
       printQRInTerminal: false,
     });
@@ -144,6 +160,22 @@ export class WhatsAppLink {
         }
       }
     });
+
+    sock.ev.on("group-participants.update", (update: { id: string }) => {
+      if (update?.id && this.onGroupUpdate) {
+        this.onGroupUpdate(update.id);
+      }
+    });
+
+    sock.ev.on("groups.update", (updates: any[]) => {
+      if (Array.isArray(updates) && this.onGroupUpdate) {
+        for (const u of updates) {
+          if (u?.id) {
+            this.onGroupUpdate(u.id);
+          }
+        }
+      }
+    });
   }
 
   private async scheduleReconnect(backoffMs: number): Promise<void> {
@@ -204,6 +236,7 @@ export class WhatsAppLink {
 
     if (this.socket) {
       try {
+        (this.socket.ev as any).removeAllListeners?.();
         this.socket.end(undefined);
       } catch {
         // ignore on stop

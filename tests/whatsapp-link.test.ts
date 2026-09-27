@@ -110,4 +110,27 @@ describe("WhatsAppLink message handling", () => {
     );
     expect(echoTracker.isSelfEcho(sentId)).toBe(true);
   });
+
+  it("fires onGroupUpdate callback on group-participants.update and groups.update events", () => {
+    const onGroupUpdate = vi.fn();
+    const link = new WhatsAppLink({
+      authDir: "./test-auth",
+      echoTracker,
+      logger: pino({ level: "silent" }),
+      onMessage: vi.fn(),
+      onGroupUpdate,
+    });
+
+    link.attachSocketEvents(mockSocket);
+
+    events.emit("group-participants.update", {
+      id: "group-123@g.us",
+      participants: ["user-new@s.whatsapp.net"],
+      action: "add",
+    });
+    expect(onGroupUpdate).toHaveBeenCalledWith("group-123@g.us");
+
+    events.emit("groups.update", [{ id: "group-456@g.us", subject: "New Name" }]);
+    expect(onGroupUpdate).toHaveBeenCalledWith("group-456@g.us");
+  });
 });
