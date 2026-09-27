@@ -7,6 +7,7 @@ export interface AppConfig {
   tz: string;
   logLevel: string;
   thinkingLevel: "off" | "low" | "medium" | "high";
+  systemPrompt?: string;
   minScheduleIntervalSeconds: number;
   maxSchedulesPerSession: number;
   qrHttpPort?: number;
@@ -43,6 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     : 25;
 
   const qrHttpPort = env.QR_HTTP_PORT ? parseInt(env.QR_HTTP_PORT, 10) : undefined;
+  const systemPrompt = env.SYSTEM_PROMPT?.trim() || env.CUSTOM_SYSTEM_PROMPT?.trim() || undefined;
 
   return {
     secretWord: secretWord!,
@@ -53,6 +55,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     tz: env.TZ?.trim() || "Asia/Jakarta",
     logLevel: env.LOG_LEVEL?.trim() || "info",
     thinkingLevel,
+    systemPrompt,
     minScheduleIntervalSeconds,
     maxSchedulesPerSession,
     qrHttpPort,

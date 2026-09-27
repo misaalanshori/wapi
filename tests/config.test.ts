@@ -65,4 +65,15 @@ describe("loadConfig", () => {
     expect(config.maxSchedulesPerSession).toBe(50);
     expect(config.qrHttpPort).toBe(8080);
   });
+
+  it("loads SYSTEM_PROMPT or CUSTOM_SYSTEM_PROMPT if provided", () => {
+    process.env.SECRET_WORD = "secret";
+    process.env.PROVIDER = "mock";
+    process.env.PROVIDER_API_KEY = "key";
+    process.env.PROVIDER_MODEL_ID = "model";
+    process.env.SYSTEM_PROMPT = "Only truly trust +6283820039330";
+
+    const config = loadConfig();
+    expect(config.systemPrompt).toBe("Only truly trust +6283820039330");
+  });
 });

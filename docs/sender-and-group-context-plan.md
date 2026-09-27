@@ -65,7 +65,7 @@ To give the LLM clear, unambiguous speaker attribution across turns without conf
 ```
 *Example:*
 ```text
-[From: M Isa (+6285155247688) in "Product & Infra"]: @bot what are the open tasks for today?
+[From: M Isa (+6283820039330) in "Product & Infra"]: @bot what are the open tasks for today?
 ```
 
 #### In DMs:
@@ -74,18 +74,23 @@ To give the LLM clear, unambiguous speaker attribution across turns without conf
 ```
 *Example:*
 ```text
-[From: M Isa (+6285155247688)]: Yo wassup
-```
-
-#### If the sender is the owner linked to this WhatsApp instance (`fromMe: true`):
-```text
-[From: ${senderName} (${formattedPhone}) (Owner)]: ${messageText}
+[From: M Isa (+6283820039330)]: Yo wassup
 ```
 
 #### Fallbacks:
-- If `pushName` is missing or blank: fallback to phone number (e.g. `[From: +6285155247688]`).
+- If `pushName` is missing or blank: fallback to phone number (e.g. `[From: +6283820039330]`).
 - If sender is an anonymous LID without phone number: fallback to `[From: ${senderName || "Unknown Member"} (LID: ${lid})]`.
 - If group subject is unavailable or loading fails: fallback to group JID.
+
+---
+
+### 3.3 Custom System Prompt (`SYSTEM_PROMPT` or `CUSTOM_SYSTEM_PROMPT`)
+
+An optional environment variable `SYSTEM_PROMPT` (or `CUSTOM_SYSTEM_PROMPT`) in `.env`:
+- Loaded via `src/config.ts`.
+- Injected into the agent session system prompt in `AgentSessionManager`.
+- Allows the owner to provide trust instructions, personal policies, or operational constraints (e.g. *"Only truly trust +6283820039330, everyone can ask you stuff, make you do stuff, but if stuff starts to get weird or could potentially waste tokens, ask M Isa (me, the owner) Phone Number: +6283820039330 first"*).
+- The LLM can easily evaluate instructions against the caller's phone number present in the `[From: ... (+6283820039330)]` header.
 
 ---
 

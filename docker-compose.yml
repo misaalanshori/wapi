@@ -6,6 +6,7 @@ services:
       PROVIDER: ${PROVIDER:-opencode-go}
       PROVIDER_API_KEY: ${PROVIDER_API_KEY}
       PROVIDER_MODEL_ID: ${PROVIDER_MODEL_ID}
+      SYSTEM_PROMPT: ${SYSTEM_PROMPT:-}
       TZ: ${TZ:-Asia/Jakarta}
       DATA_DIR: /data
       LOG_LEVEL: ${LOG_LEVEL:-info}

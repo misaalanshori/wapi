@@ -21,6 +21,47 @@ export interface ImageContent {
   mimeType: string;
 }
 
+export interface SessionPreambleInfo {
+  chatJid: string;
+  sessionId: string;
+  isGroup?: boolean;
+  groupSubject?: string;
+  participantCount?: number;
+}
+
+export function buildDefaultPreamble(
+  info: SessionPreambleInfo,
+  tz: string,
+  customSystemPrompt?: string
+): string {
+  const lines: string[] = [];
+  if (info.isGroup) {
+    const subject = info.groupSubject ? ` "${info.groupSubject}"` : "";
+    const count = info.participantCount ? `, ${info.participantCount} participants` : "";
+    lines.push(
+      `You are a personal assistant operating inside WhatsApp group${subject} (JID: ${info.chatJid}${count}).`
+    );
+    lines.push(
+      `Multiple participants can speak in this chat; each incoming user message is prefixed with the sender's identity.`
+    );
+    lines.push(
+      `When replying, address the relevant participant when helpful, and keep answers concise and suitable for a group conversation.`
+    );
+  } else {
+    lines.push(
+      `You are a personal assistant operating inside WhatsApp in a direct message for chat ${info.chatJid}.`
+    );
+  }
+  lines.push(`Current timezone is ${tz}.`);
+  lines.push(
+    `A fired schedule's output goes straight to this WhatsApp chat, so make sure your response is something worth sending.`
+  );
+  if (customSystemPrompt) {
+    lines.push(`\n${customSystemPrompt}`);
+  }
+  return lines.join("\n");
+}
+
 export interface AgentSessionManagerOptions {
   dataDir: string;
   sharedAgentDir: string;
@@ -28,10 +69,11 @@ export interface AgentSessionManagerOptions {
   modelRuntime: any;
   thinkingLevel?: "off" | "low" | "medium" | "high";
   tz?: string;
+  customSystemPrompt?: string;
   schedulerEngine?: SchedulerEngine;
   extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   sessionFactory?: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
-  formatPreamble?: (chatJid: string, sessionId: string) => string;
+  formatPreamble?: (infoOrJid: any, sessionId?: string) => string;
 }
 
 export class AgentSessionManager {
@@ -41,10 +83,11 @@ export class AgentSessionManager {
   private readonly modelRuntime: any;
   private readonly thinkingLevel: "off" | "low" | "medium" | "high";
   private readonly tz: string;
+  private readonly customSystemPrompt?: string;
   private readonly schedulerEngine?: SchedulerEngine;
   private readonly extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   private readonly sessionFactory: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
-  private readonly formatPreamble?: (chatJid: string, sessionId: string) => string;
+  private readonly formatPreamble?: (infoOrJid: any, sessionId?: string) => string;
 
   private readonly liveSessions = new Map<string, AgentSession>();
 
@@ -55,6 +98,7 @@ export class AgentSessionManager {
     this.modelRuntime = options.modelRuntime;
     this.thinkingLevel = options.thinkingLevel ?? "medium";
     this.tz = options.tz || "Asia/Jakarta";
+    this.customSystemPrompt = options.customSystemPrompt;
     this.schedulerEngine = options.schedulerEngine;
     this.extensionFactories = options.extensionFactories;
     this.sessionFactory = options.sessionFactory ?? createAgentSession;
@@ -75,7 +119,11 @@ export class AgentSessionManager {
     }
   }
 
-  async getOrCreateSession(sessionId: string, chatJid: string): Promise<AgentSession> {
+  async getOrCreateSession(
+    sessionId: string,
+    chatJid: string,
+    preambleInfo?: Partial<SessionPreambleInfo>
+  ): Promise<AgentSession> {
     const existing = this.liveSessions.get(sessionId);
     if (existing) {
       return existing;
@@ -119,9 +167,24 @@ export class AgentSessionManager {
 
     const customFactories = this.extensionFactories ? this.extensionFactories(sessionDir, sessionId) : [];
     const factories = [...defaultFactories, ...customFactories];
-    const preambleText = this.formatPreamble
-      ? this.formatPreamble(chatJid, sessionId)
-      : `You are a personal assistant operating inside WhatsApp for chat ${chatJid}.`;
+
+    const info: SessionPreambleInfo = {
+      chatJid,
+      sessionId,
+      isGroup: preambleInfo?.isGroup ?? false,
+      groupSubject: preambleInfo?.groupSubject,
+      participantCount: preambleInfo?.participantCount,
+    };
+
+    let preambleText: string;
+    if (this.formatPreamble) {
+      preambleText =
+        this.formatPreamble.length === 1
+          ? this.formatPreamble(info)
+          : this.formatPreamble(chatJid, sessionId);
+    } else {
+      preambleText = buildDefaultPreamble(info, this.tz, this.customSystemPrompt);
+    }
 
     const resourceLoader = new DefaultResourceLoader({
       cwd: sessionDir,
@@ -159,9 +222,10 @@ export class AgentSessionManager {
     chatJid: string,
     text: string,
     waLink: WhatsAppLink | { sendPresenceUpdate: (chatJid: string, presence: any) => Promise<any>; sendMessage: (chatJid: string, text: string) => Promise<any> },
-    images?: ImageContent[]
+    images?: ImageContent[],
+    preambleInfo?: Partial<SessionPreambleInfo>
   ): Promise<string | null> {
-    const session = await this.getOrCreateSession(sessionId, chatJid);
+    const session = await this.getOrCreateSession(sessionId, chatJid, preambleInfo);
 
     await waLink.sendPresenceUpdate(chatJid, "composing");
     try {

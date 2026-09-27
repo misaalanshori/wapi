@@ -14,6 +14,7 @@ import { AgentSessionManager, type ImageContent } from "./agent-session-manager.
 import { SchedulerEngine } from "./scheduler-engine.js";
 import { MediaManager } from "./media-manager.js";
 import { isMessageAddressed } from "./addressing-gate.js";
+import { formatUserPromptWithAttribution } from "./message-extractor.js";
 
 export async function main() {
   const config = loadConfig();
@@ -86,6 +87,7 @@ export async function main() {
     modelRuntime,
     thinkingLevel: config.thinkingLevel,
     tz: config.tz,
+    customSystemPrompt: config.systemPrompt,
     schedulerEngine: scheduler,
   });
 
@@ -104,31 +106,38 @@ export async function main() {
   const authDir = path.join(config.dataDir, "baileys-auth");
   const mediaManager = new MediaManager({ dataDir: config.dataDir });
 
-  // Group participant count cache (5 min TTL)
-  const groupParticipantCache = new Map<string, { count: number; expiresAt: number }>();
+  // Group metadata cache (5 min TTL)
+  const groupMetadataCache = new Map<string, { count: number; subject?: string; expiresAt: number }>();
 
   waLink = new WhatsAppLink({
     authDir,
     echoTracker,
     logger,
     onGroupUpdate: (chatJid) => {
-      groupParticipantCache.delete(chatJid);
-      logger.debug({ chatJid }, "Invalidated group participant cache on group update");
+      groupMetadataCache.delete(chatJid);
+      logger.debug({ chatJid }, "Invalidated group metadata cache on group update");
     },
     onMessage: async (msg, sock) => {
       const isGroup = Boolean(isJidGroup(msg.chatJid));
       let participantCount = 2;
+      let groupSubject: string | undefined;
 
       if (isGroup) {
-        const cached = groupParticipantCache.get(msg.chatJid);
+        const cached = groupMetadataCache.get(msg.chatJid);
         const now = Date.now();
         if (cached && cached.expiresAt > now) {
           participantCount = cached.count;
+          groupSubject = cached.subject;
         } else {
           try {
             const meta = await sock.groupMetadata(msg.chatJid);
             participantCount = meta.participants?.length ?? 3;
-            groupParticipantCache.set(msg.chatJid, { count: participantCount, expiresAt: now + 300_000 });
+            groupSubject = meta.subject;
+            groupMetadataCache.set(msg.chatJid, {
+              count: participantCount,
+              subject: groupSubject,
+              expiresAt: now + 300_000,
+            });
           } catch (err) {
             logger.debug({ err, chatJid: msg.chatJid }, "Could not fetch group metadata; defaulting count to 3");
             participantCount = 3;
@@ -203,12 +212,21 @@ export async function main() {
             }
           }
 
+          const attributedPrompt = formatUserPromptWithAttribution({
+            text: promptText,
+            senderName: msg.senderName,
+            senderPhone: msg.senderPhone,
+            isGroup,
+            groupSubject,
+          });
+
           await agentManager.deliverMessage(
             decision.sessionId,
             msg.chatJid,
-            promptText,
+            attributedPrompt,
             waLink,
-            images
+            images,
+            { isGroup, groupSubject, participantCount }
           );
         } catch (err) {
           logger.error({ err, sessionId: decision.sessionId }, "Error delivering message to agent");

@@ -5,6 +5,8 @@ export type MessageKind = "text" | "image" | "audio";
 export interface ExtractedMessage {
   chatJid: string;
   senderJid: string;
+  senderName?: string;
+  senderPhone?: string;
   fromMe: boolean;
   messageId: string;
   kind: MessageKind;
@@ -58,6 +60,13 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
   const senderJid = key.participant ?? chatJid;
   const fromMe = Boolean(key.fromMe);
   const messageId = key.id ?? "";
+  const senderName = msg.pushName?.trim() || undefined;
+
+  let senderPhone: string | undefined;
+  const userPart = senderJid.split("@")[0].split(":")[0];
+  if (/^\d+$/.test(userPart)) {
+    senderPhone = `+${userPart}`;
+  }
 
   // 1. Text message
   const textContent =
@@ -75,6 +84,8 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
     return {
       chatJid,
       senderJid,
+      senderName,
+      senderPhone,
       fromMe,
       messageId,
       kind: "text",
@@ -91,6 +102,8 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
     return {
       chatJid,
       senderJid,
+      senderName,
+      senderPhone,
       fromMe,
       messageId,
       kind: "image",
@@ -109,6 +122,8 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
     return {
       chatJid,
       senderJid,
+      senderName,
+      senderPhone,
       fromMe,
       messageId,
       kind: "audio",
@@ -124,4 +139,30 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
   }
 
   return null;
+}
+
+export interface UserPromptAttributionParams {
+  text: string;
+  senderName?: string;
+  senderPhone?: string;
+  isGroup: boolean;
+  groupSubject?: string;
+}
+
+export function formatUserPromptWithAttribution(params: UserPromptAttributionParams): string {
+  let identity = params.senderName?.trim() || "";
+  if (params.senderPhone) {
+    identity = identity ? `${identity} (${params.senderPhone})` : params.senderPhone;
+  }
+  if (!identity) {
+    identity = "Unknown User";
+  }
+
+  const groupPart = params.isGroup
+    ? params.groupSubject
+      ? ` in "${params.groupSubject}"`
+      : " in group"
+    : "";
+
+  return `[From: ${identity}${groupPart}]: ${params.text}`;
 }

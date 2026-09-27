@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractMessageInfo } from "../src/message-extractor.js";
+import { extractMessageInfo, formatUserPromptWithAttribution } from "../src/message-extractor.js";
 import type { proto } from "@whiskeysockets/baileys";
 
 describe("extractMessageInfo", () => {
@@ -21,8 +21,27 @@ describe("extractMessageInfo", () => {
     expect(info?.text).toBe("Hello world");
     expect(info?.chatJid).toBe("123456789@s.whatsapp.net");
     expect(info?.senderJid).toBe("123456789@s.whatsapp.net");
+    expect(info?.senderPhone).toBe("+123456789");
     expect(info?.fromMe).toBe(false);
     expect(info?.mentionedJids).toEqual([]);
+  });
+
+  it("extracts pushName as senderName when present", () => {
+    const msg: any = {
+      key: {
+        remoteJid: "123456789@s.whatsapp.net",
+        id: "msg-push",
+        fromMe: false,
+      },
+      pushName: "M Isa",
+      message: {
+        conversation: "Checking name",
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info?.senderName).toBe("M Isa");
+    expect(info?.senderPhone).toBe("+123456789");
   });
 
   it("extracts text and mentions from extendedTextMessage", () => {
@@ -104,5 +123,38 @@ describe("extractMessageInfo", () => {
       },
     };
     expect(extractMessageInfo(listMsg)?.text).toBe("ITEM_42");
+  });
+});
+
+describe("formatUserPromptWithAttribution", () => {
+  it("formats group message with sender name, phone, and group subject", () => {
+    const formatted = formatUserPromptWithAttribution({
+      text: "hello team",
+      senderName: "M Isa",
+      senderPhone: "+6283820039330",
+      isGroup: true,
+      groupSubject: "Project Alpha",
+    });
+    expect(formatted).toBe('[From: M Isa (+6283820039330) in "Project Alpha"]: hello team');
+  });
+
+  it("formats DM message without group subject", () => {
+    const formatted = formatUserPromptWithAttribution({
+      text: "yo",
+      senderName: "M Isa",
+      senderPhone: "+6283820039330",
+      isGroup: false,
+    });
+    expect(formatted).toBe("[From: M Isa (+6283820039330)]: yo");
+  });
+
+  it("handles missing senderName gracefully", () => {
+    const formatted = formatUserPromptWithAttribution({
+      text: "query",
+      senderPhone: "+6283820039330",
+      isGroup: true,
+      groupSubject: "Devs",
+    });
+    expect(formatted).toBe('[From: +6283820039330 in "Devs"]: query');
   });
 });
