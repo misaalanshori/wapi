@@ -263,7 +263,16 @@ export class WhatsAppLink {
     }, backoffMs);
   }
 
-  async sendMessage(chatJid: string, text: string): Promise<string> {
+  extractMentions(text: string): string[] {
+    const matches = Array.from(text.matchAll(/@(\d{7,16})\b/g));
+    const set = new Set<string>();
+    for (const m of matches) {
+      set.add(`${m[1]}@s.whatsapp.net`);
+    }
+    return Array.from(set);
+  }
+
+  async sendMessage(chatJid: string, text: string, explicitMentions?: string[]): Promise<string> {
     if (!this.socket) {
       throw new Error("Cannot send message: WhatsApp socket is not connected");
     }
@@ -271,9 +280,12 @@ export class WhatsAppLink {
     const messageId = generateMessageIDV2(this.socket.user?.id);
     this.echoTracker.track(messageId);
 
+    const autoMentions = this.extractMentions(text);
+    const mentions = Array.from(new Set([...autoMentions, ...(explicitMentions || [])]));
+
     await this.socket.sendMessage(
       chatJid,
-      { text },
+      { text, mentions: mentions.length > 0 ? mentions : undefined },
       { messageId }
     );
 

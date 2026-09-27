@@ -105,10 +105,35 @@ describe("WhatsAppLink message handling", () => {
 
     expect(mockSocket.sendMessage).toHaveBeenCalledWith(
       "chat-1@s.whatsapp.net",
-      { text: "Assistant reply" },
+      { text: "Assistant reply", mentions: undefined },
       { messageId: sentId }
     );
     expect(echoTracker.isSelfEcho(sentId)).toBe(true);
+  });
+
+  it("automatically extracts @phone numbers and passes them to mentions array in sendMessage", async () => {
+    const link = new WhatsAppLink({
+      authDir: "./test-auth",
+      echoTracker,
+      logger: pino({ level: "silent" }),
+      onMessage: vi.fn(),
+    });
+
+    link.attachSocketEvents(mockSocket);
+
+    const sentId = await link.sendMessage(
+      "group-1@g.us",
+      "Hello @6283820039330 and @1234567890 please check this out"
+    );
+
+    expect(mockSocket.sendMessage).toHaveBeenCalledWith(
+      "group-1@g.us",
+      {
+        text: "Hello @6283820039330 and @1234567890 please check this out",
+        mentions: ["6283820039330@s.whatsapp.net", "1234567890@s.whatsapp.net"],
+      },
+      { messageId: sentId }
+    );
   });
 
   it("fires onGroupUpdate callback on group-participants.update and groups.update events", () => {

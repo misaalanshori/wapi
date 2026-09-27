@@ -55,6 +55,9 @@ export function buildDefaultPreamble(
     lines.push(
       `When replying, address the relevant participant when helpful, and keep answers concise and suitable for a group conversation.`
     );
+    lines.push(
+      `To mention or tag a participant in your reply, write their phone number with '@' (e.g. "@6283820039330"); the platform automatically turns this into a clickable WhatsApp notification tag.`
+    );
   } else {
     lines.push(
       `You are a personal assistant operating inside WhatsApp in a direct message for chat ${info.chatJid}.`
