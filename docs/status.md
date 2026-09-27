@@ -74,12 +74,12 @@
 - [x] Phase M1 test suite passing
 
 ### Phase M2: Media Manager & File Persistence
-- [ ] Implement `src/media-manager.ts`
-- [ ] Download media via Baileys `downloadMediaMessage`
-- [ ] Persist files to `sessions/<uuid>/media/<messageId>.<ext>`
-- [ ] Enforce `MAX_MEDIA_PER_SESSION` rolling pruning
-- [ ] Return `{ filePath, base64Data, mimeType }` for model consumption
-- [ ] Phase M2 test suite passing
+- [x] Implement `src/media-manager.ts`
+- [x] Download media via Baileys `downloadMediaMessage`
+- [x] Persist files to `sessions/<uuid>/media/<messageId>.<ext>`
+- [x] Enforce `MAX_MEDIA_PER_SESSION` rolling pruning
+- [x] Return `{ filePath, base64Data, mimeType }` for model consumption
+- [x] Phase M2 test suite passing
 
 ### Phase M3: Multimodal Prompting Integration
 - [ ] Update `AgentSessionManager.deliverMessage` to accept optional `images?: ImageContent[]`
