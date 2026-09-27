@@ -47,13 +47,13 @@
 - [x] Phase 2 test suite passing
 
 ### Phase 3: Scheduler
-- [ ] Schedules database (`schedules.sqlite`) per session (§8.5.2)
-- [ ] In-process Scheduler Engine min-heap + single timer (§8.5.3)
-- [ ] Catch-up policy on startup and resume (§8.5.4)
-- [ ] Scheduler guardrails (`MIN_SCHEDULE_INTERVAL_SECONDS`, `MAX_SCHEDULES_PER_SESSION`) (§8.5.5)
-- [ ] `schedule` tool (`create`, `list`, `cancel`) (§8.5.6)
-- [ ] Integration with pause/resume and delivery loop (§8.5.3, §8.5.4)
-- [ ] Phase 3 test suite passing
+- [x] Schedules database (`schedules.sqlite`) per session (§8.5.2)
+- [x] In-process Scheduler Engine min-heap + single timer (§8.5.3)
+- [x] Catch-up policy on startup and resume (§8.5.4)
+- [x] Scheduler guardrails (`MIN_SCHEDULE_INTERVAL_SECONDS`, `MAX_SCHEDULES_PER_SESSION`) (§8.5.5)
+- [x] `schedule` tool (`create`, `list`, `cancel`) (§8.5.6)
+- [x] Integration with pause/resume and delivery loop (§8.5.3, §8.5.4)
+- [x] Phase 3 test suite passing
 
 ### Phase 4: Hardening & Verification
 - [ ] Long reply chunking (~4000 chars on paragraph boundaries) (§8.3)

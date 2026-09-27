@@ -32,3 +32,14 @@
   - Wired into `AgentSessionManager` to register `sqlite_storage` on each session's own private `storage.sqlite`.
   - Driven verification: Tested table creation, parameterized queries, row count reporting, and auto-backup creation on disk.
   - All gates green: `check:types`, `test` (56 tests passing), `build`.
+
+## 2025-09-27 — Phase 3 Complete
+- Implemented Phase 3 via TDD:
+  - `src/schedules-db.ts`: `SchedulesDatabase` for per-session `schedules.sqlite` (CRUD, enabled state, fire updates).
+  - `src/scheduler-engine.ts`: In-memory min-heap with single `setTimeout`, scanning `DATA_DIR/sessions/*/schedules.sqlite` on startup.
+  - Guardrails: enforced interval check (>= 60s) for cron expressions, max 25 schedules per session, clamping past dates to now.
+  - Catch-up policy: one-shot missed tasks fire with `(catch-up)` tag upon resume or startup; recurring schedules advance to next future occurrence without duplicate fires.
+  - State gating: paused sessions in `registry.sqlite` have schedule execution safely skipped.
+  - `src/schedule-tool.ts`: Registered `schedule` tool (`create`, `list`, `cancel`) for Pi agent sessions.
+  - Driven verification: Created live schedule in temporary session directory, verified timer firing, callback delivery, and SQLite record update.
+  - All gates green: `check:types`, `test` (67 tests passing), `build`.

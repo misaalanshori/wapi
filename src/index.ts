@@ -11,6 +11,7 @@ import { initModelRuntime } from "./model-runtime.js";
 import { SessionRegistry } from "./session-registry.js";
 import { SessionGatekeeper } from "./session-gatekeeper.js";
 import { AgentSessionManager } from "./agent-session-manager.js";
+import { SchedulerEngine } from "./scheduler-engine.js";
 import { isMessageAddressed } from "./addressing-gate.js";
 
 export async function main() {
@@ -56,6 +57,25 @@ export async function main() {
 
   const registry = new SessionRegistry(registryDb);
 
+  let waLink: WhatsAppLink;
+
+  // Initialize Scheduler Engine
+  const scheduler = new SchedulerEngine({
+    dataDir: config.dataDir,
+    registry,
+    tz: config.tz,
+    minScheduleIntervalSeconds: config.minScheduleIntervalSeconds,
+    maxSchedulesPerSession: config.maxSchedulesPerSession,
+    onFire: async (item) => {
+      logger.info({ sessionId: item.sessionId, scheduleId: item.scheduleId }, "Scheduler fired task");
+      try {
+        await agentManager.deliverMessage(item.sessionId, item.chatJid, item.prompt, waLink);
+      } catch (err) {
+        logger.error({ err, sessionId: item.sessionId }, "Failed to deliver scheduled prompt to chat");
+      }
+    },
+  });
+
   // Initialize Agent Session Manager
   const agentManager = new AgentSessionManager({
     dataDir: config.dataDir,
@@ -63,6 +83,7 @@ export async function main() {
     model,
     modelRuntime,
     thinkingLevel: config.thinkingLevel,
+    schedulerEngine: scheduler,
   });
 
   // Initialize Session Gatekeeper
@@ -71,6 +92,9 @@ export async function main() {
     registry,
     sessionExistsOnDisk: (uuid) => agentManager.sessionExistsOnDisk(uuid),
     onSessionPaused: (id) => agentManager.disposeSession(id),
+    onSessionResumed: async (id) => {
+      await scheduler.catchUpSession(id);
+    },
   });
 
   const echoTracker = new EchoTracker();
@@ -78,8 +102,6 @@ export async function main() {
 
   // Group participant count cache (5 min TTL)
   const groupParticipantCache = new Map<string, { count: number; expiresAt: number }>();
-
-  let waLink: WhatsAppLink;
 
   waLink = new WhatsAppLink({
     authDir,
@@ -153,6 +175,7 @@ export async function main() {
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Shutting down gracefully...");
+    scheduler.stop();
     await waLink.stop();
     await agentManager.disposeAll();
     registryDb.close();
@@ -162,6 +185,7 @@ export async function main() {
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 
+  await scheduler.start();
   await waLink.start();
 }
 

@@ -9,6 +9,8 @@ import {
 import type { WhatsAppLink } from "./whatsapp-link.js";
 
 import { registerSqliteStorageTool } from "./sqlite-storage.js";
+import { registerScheduleTool } from "./schedule-tool.js";
+import type { SchedulerEngine } from "./scheduler-engine.js";
 
 export interface AgentSessionManagerOptions {
   dataDir: string;
@@ -16,6 +18,7 @@ export interface AgentSessionManagerOptions {
   model: any;
   modelRuntime: any;
   thinkingLevel?: "off" | "low" | "medium" | "high";
+  schedulerEngine?: SchedulerEngine;
   extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   sessionFactory?: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
   formatPreamble?: (chatJid: string, sessionId: string) => string;
@@ -27,6 +30,7 @@ export class AgentSessionManager {
   private readonly model: any;
   private readonly modelRuntime: any;
   private readonly thinkingLevel: "off" | "low" | "medium" | "high";
+  private readonly schedulerEngine?: SchedulerEngine;
   private readonly extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   private readonly sessionFactory: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
   private readonly formatPreamble?: (chatJid: string, sessionId: string) => string;
@@ -39,6 +43,7 @@ export class AgentSessionManager {
     this.model = options.model;
     this.modelRuntime = options.modelRuntime;
     this.thinkingLevel = options.thinkingLevel ?? "medium";
+    this.schedulerEngine = options.schedulerEngine;
     this.extensionFactories = options.extensionFactories;
     this.sessionFactory = options.sessionFactory ?? createAgentSession;
     this.formatPreamble = options.formatPreamble;
@@ -94,6 +99,11 @@ export class AgentSessionManager {
         path.join(sessionDir, "storage-backups")
       ),
     ];
+
+    if (this.schedulerEngine) {
+      defaultFactories.push(registerScheduleTool(sessionId, this.schedulerEngine));
+    }
+
     const customFactories = this.extensionFactories ? this.extensionFactories(sessionDir, sessionId) : [];
     const factories = [...defaultFactories, ...customFactories];
     const preambleText = this.formatPreamble
