@@ -13,6 +13,7 @@ import { registerScheduleTool } from "./schedule-tool.js";
 import type { SchedulerEngine } from "./scheduler-engine.js";
 
 import { chunkMessage } from "./message-chunker.js";
+import { defaultTimeAwareExtension, stripTimeAwareTags } from "pi-time-aware";
 
 export interface ImageContent {
   type: "image";
@@ -106,6 +107,7 @@ export class AgentSessionManager {
         path.join(sessionDir, "storage.sqlite"),
         path.join(sessionDir, "storage-backups")
       ),
+      defaultTimeAwareExtension,
     ];
 
     if (this.schedulerEngine) {
@@ -167,7 +169,8 @@ export class AgentSessionManager {
       await (session as any).prompt(text, promptOptions);
       const reply = session.getLastAssistantText();
       if (reply && reply.trim().length > 0) {
-        const chunks = chunkMessage(reply, 4000);
+        const cleanReply = stripTimeAwareTags(reply);
+        const chunks = chunkMessage(cleanReply, 4000);
         for (const chunk of chunks) {
           await waLink.sendMessage(chatJid, chunk);
         }

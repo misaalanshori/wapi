@@ -3,7 +3,7 @@
 **Date:** 2025-09-27  
 **Status:** Completed  
 **Branch:** `main`  
-**All Gates:** Green (`tsc --noEmit`, `vitest run` 90/90 tests passing, `tsc -p tsconfig.build.json`, Docker build verified)
+**All Gates:** Green (`tsc --noEmit`, `vitest run` 91/91 tests passing, `tsc -p tsconfig.build.json`, Docker build verified)
 
 ---
 
@@ -59,16 +59,22 @@
 - **Driven for Real:**
   - Built the production container image using Docker Engine (`wa-assistant:test`), ran container execution test, and verified expected environment validation failure in container environment.
 
-### Non-Text Media Phases (M1–M4): Images & Audio Processing
+### Non-Text Media Processing: Images & Audio
 - **Implemented:**
   - `src/message-extractor.ts`: Extraction of `imageMessage` (with captions and `viewOnceMessage` wrappers) and `audioMessage` (with PTT voice note metadata).
   - `src/session-gatekeeper.ts`: Audio rejection notice (*"Sorry, I cannot understand audio or voice notes yet. Please send a text message or image."*) when addressed in active chats, with silent drops in uninitialized/unaddressed chats.
   - `src/media-manager.ts`: Baileys media download, durable per-session storage in `sessions/<uuid>/media/<messageId>.<ext>`, size boundary enforcement (10MB), and auto-pruning to `maxMediaPerSession` (50).
   - `src/agent-session-manager.ts`: Multimodal `ImageContent` support for `session.prompt(text, { images, streamingBehavior: "followUp" })`.
-  - `tests/multimodal-delivery.integration.test.ts` and regression tests in `tests/regressions/`.
 - **Driven for Real:**
   - Tested download, file persistence on disk, base64 conversion, and prompt injection with attached visual images.
   - Verified Docker image build with media processing extensions.
+
+### Time-Aware Extension Wiring
+- Installed `pi-time-aware` (`github:misaalanshori/pi-time-aware`) as a first-class Pi extension.
+- Automatically injects time context across user inputs, tool executions, and assistant responses.
+- Outbound responses are stripped of `<TimeAware>` tags via `stripTimeAwareTags()` before sending over WhatsApp.
+- Verified Docker build with multi-stage npm git resolution.
+- Vitest test suite grew to 91 passing tests.
 
 ---
 

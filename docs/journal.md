@@ -61,3 +61,10 @@
   - Phase M3: Extended `AgentSessionManager.deliverMessage` to accept optional `ImageContent[]` and pass multimodal images to `session.prompt(text, { images, streamingBehavior: "followUp" })`. Connected image download and fallback prompting in `src/index.ts`.
   - Phase M4: Added permanent regression tests for empty captions, voice note group tags, and download error recovery. Verified Docker container build.
   - All gates green: `check:types`, `test` (90 tests passing), `build`.
+
+## 2026-09-27 — pi-time-aware Extension Wired to WAPI
+- Installed `pi-time-aware` via GitHub dependency (`github:misaalanshori/pi-time-aware`).
+- Added `defaultTimeAwareExtension` to default extension factories in `AgentSessionManager.getOrCreateSession`.
+- Added `stripTimeAwareTags(reply)` in `deliverMessage` before WhatsApp chunking and transmission, ensuring `<TimeAware>` tags enrich the agent's context without leaking to the user.
+- Verified Docker build with multi-stage npm git resolution.
+- All gates green: `check:types`, `test` (91 tests passing), `build`.
