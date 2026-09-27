@@ -10,8 +10,9 @@ import { WhatsAppLink } from "./whatsapp-link.js";
 import { initModelRuntime } from "./model-runtime.js";
 import { SessionRegistry } from "./session-registry.js";
 import { SessionGatekeeper } from "./session-gatekeeper.js";
-import { AgentSessionManager } from "./agent-session-manager.js";
+import { AgentSessionManager, type ImageContent } from "./agent-session-manager.js";
 import { SchedulerEngine } from "./scheduler-engine.js";
+import { MediaManager } from "./media-manager.js";
 import { isMessageAddressed } from "./addressing-gate.js";
 
 export async function main() {
@@ -99,6 +100,7 @@ export async function main() {
 
   const echoTracker = new EchoTracker();
   const authDir = path.join(config.dataDir, "baileys-auth");
+  const mediaManager = new MediaManager({ dataDir: config.dataDir });
 
   // Group participant count cache (5 min TTL)
   const groupParticipantCache = new Map<string, { count: number; expiresAt: number }>();
@@ -145,6 +147,9 @@ export async function main() {
         chatJid: msg.chatJid,
         senderJid: msg.senderJid,
         text: msg.text,
+        kind: msg.kind,
+        rawMessage: msg.rawMessage,
+        mediaInfo: msg.mediaInfo,
       });
 
       if (decision.type === "drop") {
@@ -159,11 +164,39 @@ export async function main() {
 
       if (decision.type === "forward") {
         try {
+          let images: ImageContent[] | undefined;
+          let promptText = decision.text;
+
+          if (decision.kind === "image" && decision.rawMessage) {
+            try {
+              const saved = await mediaManager.downloadAndSaveImage(
+                decision.sessionId,
+                decision.rawMessage,
+                sock
+              );
+              images = [
+                {
+                  type: "image",
+                  data: saved.base64Data,
+                  mimeType: saved.mimeType,
+                },
+              ];
+              if (!promptText || promptText.trim().length === 0) {
+                promptText = "[User sent an image]";
+              }
+            } catch (mediaErr) {
+              logger.error({ err: mediaErr, sessionId: decision.sessionId }, "Failed to download image message");
+              await waLink.sendMessage(msg.chatJid, "Failed to download image. Please try sending it again.");
+              return;
+            }
+          }
+
           await agentManager.deliverMessage(
             decision.sessionId,
             msg.chatJid,
-            decision.text,
-            waLink
+            promptText,
+            waLink,
+            images
           );
         } catch (err) {
           logger.error({ err, sessionId: decision.sessionId }, "Error delivering message to agent");

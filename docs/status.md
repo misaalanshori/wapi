@@ -82,11 +82,11 @@
 - [x] Phase M2 test suite passing
 
 ### Phase M3: Multimodal Prompting Integration
-- [ ] Update `AgentSessionManager.deliverMessage` to accept optional `images?: ImageContent[]`
-- [ ] Pass `images` to `session.prompt(text, { images, streamingBehavior: "followUp" })`
-- [ ] Wire image download and multimodal prompting into `src/index.ts`
-- [ ] Integration test for image message delivery
-- [ ] Phase M3 test suite passing
+- [x] Update `AgentSessionManager.deliverMessage` to accept optional `images?: ImageContent[]`
+- [x] Pass `images` to `session.prompt(text, { images, streamingBehavior: "followUp" })`
+- [x] Wire image download and multimodal prompting into `src/index.ts`
+- [x] Integration test for image message delivery
+- [x] Phase M3 test suite passing
 
 ### Phase M4: Hardening & Regressions
 - [ ] Add regression tests (empty caption fallback, corrupted download handling, voice note in group)

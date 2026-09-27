@@ -14,6 +14,12 @@ import type { SchedulerEngine } from "./scheduler-engine.js";
 
 import { chunkMessage } from "./message-chunker.js";
 
+export interface ImageContent {
+  type: "image";
+  data: string;
+  mimeType: string;
+}
+
 export interface AgentSessionManagerOptions {
   dataDir: string;
   sharedAgentDir: string;
@@ -147,13 +153,18 @@ export class AgentSessionManager {
     sessionId: string,
     chatJid: string,
     text: string,
-    waLink: WhatsAppLink | { sendPresenceUpdate: (chatJid: string, presence: any) => Promise<any>; sendMessage: (chatJid: string, text: string) => Promise<any> }
+    waLink: WhatsAppLink | { sendPresenceUpdate: (chatJid: string, presence: any) => Promise<any>; sendMessage: (chatJid: string, text: string) => Promise<any> },
+    images?: ImageContent[]
   ): Promise<string | null> {
     const session = await this.getOrCreateSession(sessionId, chatJid);
 
     await waLink.sendPresenceUpdate(chatJid, "composing");
     try {
-      await (session as any).prompt(text, { streamingBehavior: "followUp" });
+      const promptOptions: any = { streamingBehavior: "followUp" };
+      if (images && images.length > 0) {
+        promptOptions.images = images;
+      }
+      await (session as any).prompt(text, promptOptions);
       const reply = session.getLastAssistantText();
       if (reply && reply.trim().length > 0) {
         const chunks = chunkMessage(reply, 4000);
