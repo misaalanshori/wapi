@@ -75,3 +75,12 @@
   - Chat context (group subject/title, group JID, participant count, DM vs Group).
   - Rich session system prompt preambles and per-turn conversational attribution headers `[From: ... in "..."]: <text>`.
   - Phased TDD implementation strategy across 4 phases (C1–C4).
+  - Completed all phases C1–C4: 29 test files, 108 tests passing, Docker deployed.
+
+## 2026-09-27 — Architecture Plan: Conversational Context, Replies & Group Situational Awareness
+- Authored formal plan in `docs/conversational-context-and-replies-plan.md` covering:
+  - Quoted message extraction: extracting `contextInfo.quotedMessage` and participant phone/name, formatting `[Replying to <User>: "<Text>"]`.
+  - Reply-to-bot triggering: extending addressing gate so swiping to reply to the bot in a group triggers a response without needing `@bot`.
+  - Rolling ambient group chatter buffer: maintaining bounded in-memory ring buffer (last 15 messages) of group chatter to give situational awareness when called.
+  - Group roster & topic/description: enriching session preamble with group topic and admin list from `groupMetadata`.
+  - Phased TDD implementation strategy across 5 phases (R1–R5).

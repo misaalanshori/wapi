@@ -96,7 +96,16 @@
 ---
 
 ## Sender & Group Context Awareness (docs/sender-and-group-context-plan.md)
-- [ ] Phase C1: Message Extractor identity enrichment (`pushName`, phone number)
-- [ ] Phase C2: Group metadata subject caching & real-time invalidation
-- [ ] Phase C3: Turn attribution envelope & rich session preamble
-- [ ] Phase C4: Regression tests, typecheck, build, and deployment verification
+- [x] Phase C1: Message Extractor identity enrichment (`pushName`, phone number)
+- [x] Phase C2: Group metadata subject caching & real-time invalidation
+- [x] Phase C3: Turn attribution envelope & rich session preamble
+- [x] Phase C4: Regression tests, typecheck, build, and deployment verification
+
+---
+
+## Conversational Context, Replies & Group Situational Awareness (docs/conversational-context-and-replies-plan.md)
+- [ ] Phase R1: Quoted message extraction & reply-to-bot addressing
+- [ ] Phase R2: Quoted message prompt attribution envelope
+- [ ] Phase R3: Rolling ambient group chatter buffer (last 15 messages)
+- [ ] Phase R4: Group roster & topic/description in session preamble
+- [ ] Phase R5: Verification, regression suite, and deployment
