@@ -117,3 +117,12 @@
 - [x] Phase S2: Download and pass `.webp` stickers through `MediaManager` into `session.prompt()`
 - [x] Phase S3: Quoted sticker image download & vision prompting when replying to stickers
 - [x] Phase S4: Regression suite, typecheck, build, and deployment
+
+---
+
+## Document & General File Retrieval
+- [x] Extract `documentMessage` (PDF, CSV, TXT, code, archives) with metadata (fileName, mimeType, fileLength)
+- [x] Download and persist documents to `sessions/<uuid>/media/<msgId>-<safeFileName>`
+- [x] Support quoted document messages with `[Quoted Document: ...]`
+- [x] Installed `poppler-utils` (`pdftotext`), `curl`, `wget`, `python3` in Docker container
+- [x] Regression test suite (`document-processing.regression.test.ts`), all gates green, deployed

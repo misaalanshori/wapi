@@ -97,3 +97,12 @@
   - `src/index.ts`: When a message quotes a sticker or image without attaching a new image, it downloads the quoted sticker and feeds it into `images` for multimodal LLM vision.
   - Added permanent regression test `tests/regressions/sticker-processing.regression.test.ts`.
   - All 31 test files, 124 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Document & General File Retrieval
+- Added end-to-end file/document processing:
+  - Ingestion: `src/message-extractor.ts` extracts `documentMessage` (PDF, CSV, TXT, code, etc.) as `kind: "document"`, capturing `fileName`, `mimeType`, and `fileLength`. Quoted documents extract with `[Document: fileName]`.
+  - Persistence: `src/media-manager.ts` adds `downloadAndSaveDocument`, storing clean files under `sessions/<uuid>/media/<msgId>-<safeFileName>`.
+  - Router Delivery: In `src/index.ts`, downloaded documents (and quoted documents) inject an explicit file path note into the user prompt: `[Attached Document: "fileName" saved at "filePath" (size, mime)]`.
+  - Container Tooling: Added `poppler-utils` (`pdftotext`), `curl`, `wget` to `Dockerfile`. The agent can inspect text files via `read` tool, parse PDFs via `pdftotext`, or run scripts via `python3`.
+  - Added regression test `tests/regressions/document-processing.regression.test.ts`.
+  - All 32 test files, 130 tests passing. Deployed to Docker.
