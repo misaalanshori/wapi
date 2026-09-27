@@ -92,3 +92,11 @@
 - [x] Add regression tests (empty caption fallback, corrupted download handling, voice note in group)
 - [x] Verify all gates (`check:types`, `vitest run`, `build`, Docker build)
 - [x] Update `docs/journal.md` and `docs/report.md`
+
+---
+
+## Sender & Group Context Awareness (docs/sender-and-group-context-plan.md)
+- [ ] Phase C1: Message Extractor identity enrichment (`pushName`, phone number)
+- [ ] Phase C2: Group metadata subject caching & real-time invalidation
+- [ ] Phase C3: Turn attribution envelope & rich session preamble
+- [ ] Phase C4: Regression tests, typecheck, build, and deployment verification

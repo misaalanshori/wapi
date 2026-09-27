@@ -68,3 +68,10 @@
 - Added `stripTimeAwareTags(reply)` in `deliverMessage` before WhatsApp chunking and transmission, ensuring `<TimeAware>` tags enrich the agent's context without leaking to the user.
 - Verified Docker build with multi-stage npm git resolution.
 - All gates green: `check:types`, `test` (91 tests passing), `build`.
+
+## 2026-09-27 — Architecture Plan: Sender & Group Context Awareness
+- Authored comprehensive plan in `docs/sender-and-group-context-plan.md` to enrich LLM prompts with:
+  - Sender identity (`pushName`, formatted international phone number, and owner indicator).
+  - Chat context (group subject/title, group JID, participant count, DM vs Group).
+  - Rich session system prompt preambles and per-turn conversational attribution headers `[From: ... in "..."]: <text>`.
+  - Phased TDD implementation strategy across 4 phases (C1–C4).
