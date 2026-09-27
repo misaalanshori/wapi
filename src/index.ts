@@ -14,7 +14,7 @@ import { AgentSessionManager, type ImageContent } from "./agent-session-manager.
 import { SchedulerEngine } from "./scheduler-engine.js";
 import { MediaManager } from "./media-manager.js";
 import { isMessageAddressed } from "./addressing-gate.js";
-import { formatUserPromptWithAttribution } from "./message-extractor.js";
+import { formatUserPromptWithAttribution, unwrapMessageContent } from "./message-extractor.js";
 import { ChatHistoryBuffer } from "./chat-history-buffer.js";
 
 export async function main() {
@@ -242,6 +242,33 @@ export async function main() {
               logger.error({ err: mediaErr, sessionId: decision.sessionId }, "Failed to download image message");
               await waLink.sendMessage(msg.chatJid, "Failed to download image. Please try sending it again.");
               return;
+            }
+          }
+
+          // If current message has no image, but quotes an image or sticker, download quoted media
+          const quotedUnwrapped = unwrapMessageContent(msg.quoted?.rawMessage?.message);
+          const hasQuotedMedia = Boolean(
+            quotedUnwrapped?.imageMessage || quotedUnwrapped?.stickerMessage
+          );
+          if (!images && hasQuotedMedia && msg.quoted?.rawMessage) {
+            try {
+              const saved = await mediaManager.downloadAndSaveImage(
+                decision.sessionId,
+                msg.quoted.rawMessage,
+                sock
+              );
+              images = [
+                {
+                  type: "image",
+                  data: saved.base64Data,
+                  mimeType: saved.mimeType,
+                },
+              ];
+            } catch (mediaErr) {
+              logger.debug(
+                { err: mediaErr, sessionId: decision.sessionId },
+                "Could not download quoted media; proceeding with text prompt"
+              );
             }
           }
 

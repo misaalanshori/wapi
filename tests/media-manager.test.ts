@@ -86,6 +86,33 @@ describe("MediaManager", () => {
     expect(res.filePath).toContain("dl-msg-1.png");
   });
 
+  it("downloads and saves sticker message with webp mimetype", async () => {
+    const sessionId = "uuid-stk-dl";
+    const mockBuffer = Buffer.from("webp-sticker-bytes");
+    const mockDownloadFn = vi.fn().mockResolvedValue(mockBuffer);
+
+    const customManager = new MediaManager({
+      dataDir: tmpDir,
+      downloadFn: mockDownloadFn,
+    });
+
+    const mockRawMsg: any = {
+      key: { id: "stk-msg-1" },
+      message: {
+        stickerMessage: {
+          mimetype: "image/webp",
+        },
+      },
+    };
+
+    const res = await customManager.downloadAndSaveImage(sessionId, mockRawMsg);
+
+    expect(mockDownloadFn).toHaveBeenCalledWith(mockRawMsg);
+    expect(res.base64Data).toBe(mockBuffer.toString("base64"));
+    expect(res.mimeType).toBe("image/webp");
+    expect(res.filePath).toContain("stk-msg-1.webp");
+  });
+
   it("rejects image exceeding maxBytes limit", async () => {
     const sessionId = "uuid-oversized";
     const bigBuffer = Buffer.alloc(2 * 1024 * 1024); // 2MB > 1MB limit

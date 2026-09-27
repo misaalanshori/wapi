@@ -120,21 +120,57 @@ describe("extractMessageInfo", () => {
     expect(info?.quoted?.phone).toBe("+123456789");
   });
 
-  it("returns null for unsupported message types (e.g. sticker, poll)", () => {
+  it("extracts sticker message as kind image with webp mimetype", () => {
     const msg: proto.IWebMessageInfo = {
       key: {
         remoteJid: "123456789@s.whatsapp.net",
         id: "msg-sticker",
+        fromMe: false,
       },
       message: {
         stickerMessage: {
           url: "https://example.com/sticker",
+          mimetype: "image/webp",
+          isAnimated: false,
         },
       },
     };
 
     const info = extractMessageInfo(msg);
-    expect(info).toBeNull();
+    expect(info).not.toBeNull();
+    expect(info?.kind).toBe("image");
+    expect(info?.text).toBe("[User sent a sticker]");
+    expect(info?.mediaInfo?.mimeType).toBe("image/webp");
+  });
+
+  it("extracts quoted sticker message with [Sticker] snippet", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "12345-67890@g.us",
+        participant: "sender@s.whatsapp.net",
+        fromMe: false,
+        id: "msg-reply-sticker",
+      },
+      message: {
+        extendedTextMessage: {
+          text: "@bot what is this sticker?",
+          contextInfo: {
+            participant: "123456789@s.whatsapp.net",
+            stanzaId: "target-stk",
+            quotedMessage: {
+              stickerMessage: {
+                mimetype: "image/webp",
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info?.quoted).toBeDefined();
+    expect(info?.quoted?.text).toBe("[Sticker]");
+    expect(info?.quoted?.rawMessage).toBeDefined();
   });
 
   it("returns null if text is empty or missing", () => {

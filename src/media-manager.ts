@@ -95,7 +95,10 @@ export class MediaManager {
   ): Promise<SavedMediaResult> {
     const msgId = rawMessage.key?.id || `img-${Date.now()}`;
     const unwrapped = unwrapMessageContent(rawMessage.message);
-    const mimeType = unwrapped?.imageMessage?.mimetype || "image/jpeg";
+    const mimeType =
+      unwrapped?.imageMessage?.mimetype ||
+      unwrapped?.stickerMessage?.mimetype ||
+      "image/jpeg";
 
     let buffer: Buffer;
     if (this.downloadFn) {

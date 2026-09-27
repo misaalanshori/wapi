@@ -8,6 +8,7 @@ export interface QuotedMessageInfo {
   phone?: string;
   lid?: string;
   text?: string;
+  rawMessage?: proto.IWebMessageInfo;
 }
 
 export interface ExtractedMessage {
@@ -48,6 +49,7 @@ export function extractMessageText(msg: proto.IWebMessageInfo): string | null {
     m.conversation ??
     m.extendedTextMessage?.text ??
     m.imageMessage?.caption ??
+    (m.stickerMessage ? (m.stickerMessage.isAnimated ? "[Animated Sticker]" : "[Sticker]") : undefined) ??
     (m as any).buttonsResponseMessage?.selectedButtonId ??
     (m as any).listResponseMessage?.singleSelectReply?.selectedRowId ??
     (m as any).templateButtonReplyMessage?.selectedId;
@@ -108,6 +110,14 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       phone: quotedPhone,
       lid: quotedLid,
       text: quotedText,
+      rawMessage: {
+        key: {
+          id: contextInfo.stanzaId ?? undefined,
+          remoteJid: chatJid,
+          participant: contextInfo.participant ?? undefined,
+        },
+        message: contextInfo.quotedMessage,
+      },
     };
   }
 
@@ -155,6 +165,30 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       rawMessage: msg,
       mediaInfo: {
         mimeType: m.imageMessage.mimetype ?? "image/jpeg",
+      },
+    };
+  }
+
+  // 3. Sticker message
+  if (m.stickerMessage) {
+    const isAnim = Boolean(m.stickerMessage.isAnimated);
+    const caption = isAnim ? "[User sent an animated sticker]" : "[User sent a sticker]";
+    const mentionedJids = (m.stickerMessage as any).contextInfo?.mentionedJid ?? [];
+    return {
+      chatJid,
+      senderJid,
+      senderName,
+      senderPhone,
+      senderLid,
+      fromMe,
+      messageId,
+      kind: "image",
+      text: caption,
+      mentionedJids: mentionedJids.filter(Boolean) as string[],
+      quoted,
+      rawMessage: msg,
+      mediaInfo: {
+        mimeType: m.stickerMessage.mimetype ?? "image/webp",
       },
     };
   }
