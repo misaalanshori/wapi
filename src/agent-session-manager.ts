@@ -15,6 +15,8 @@ import type { SchedulerEngine } from "./scheduler-engine.js";
 
 import { chunkMessage } from "./message-chunker.js";
 import { createTimeAwareExtension, stripTimeAwareTags } from "pi-time-aware";
+import { CompactionCoordinator } from "./compaction-coordinator.js";
+import type { CompactionConfig } from "./config.js";
 
 export interface ImageContent {
   type: "image";
@@ -87,6 +89,7 @@ export interface AgentSessionManagerOptions {
   customSystemPrompt?: string;
   defaultSender?: SendFileSender;
   presenceHeartbeatMs?: number;
+  compactionConfig?: CompactionConfig;
   schedulerEngine?: SchedulerEngine;
   extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   sessionFactory?: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
@@ -103,6 +106,7 @@ export class AgentSessionManager {
   private readonly customSystemPrompt?: string;
   private readonly defaultSender?: SendFileSender;
   private readonly presenceHeartbeatMs: number;
+  private readonly compactionCoordinator?: CompactionCoordinator;
   private readonly schedulerEngine?: SchedulerEngine;
   private readonly extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   private readonly sessionFactory: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
@@ -121,6 +125,14 @@ export class AgentSessionManager {
     this.customSystemPrompt = options.customSystemPrompt;
     this.defaultSender = options.defaultSender;
     this.presenceHeartbeatMs = options.presenceHeartbeatMs ?? 7000;
+    if (options.compactionConfig) {
+      this.compactionCoordinator = new CompactionCoordinator({
+        ...options.compactionConfig,
+        onCompact: async (sessionId, instructions) => {
+          await this.runCompaction(sessionId, instructions);
+        },
+      });
+    }
     this.schedulerEngine = options.schedulerEngine;
     this.extensionFactories = options.extensionFactories;
     this.sessionFactory = options.sessionFactory ?? createAgentSession;
@@ -266,6 +278,7 @@ export class AgentSessionManager {
     images?: ImageContent[],
     preambleInfo?: Partial<SessionPreambleInfo>
   ): Promise<string | null> {
+    this.compactionCoordinator?.cancelTimer(sessionId);
     const previous = this.sessionQueues.get(sessionId) || Promise.resolve();
 
     const currentTask = (async () => {
@@ -309,6 +322,12 @@ export class AgentSessionManager {
       }
       await (session as any).prompt(text, promptOptions);
       const reply = session.getLastAssistantText();
+
+      const tokens = session.getContextUsage?.()?.tokens;
+      if (typeof tokens === "number" && this.compactionCoordinator) {
+        this.compactionCoordinator.recordTurnTokens(sessionId, tokens);
+      }
+
       if (reply && reply.trim().length > 0) {
         const cleanReply = stripTimeAwareTags(reply);
         const chunks = chunkMessage(cleanReply, 4000);
@@ -324,7 +343,37 @@ export class AgentSessionManager {
     }
   }
 
+  async runCompaction(sessionId: string, instructions: string): Promise<void> {
+    const previous = this.sessionQueues.get(sessionId) || Promise.resolve();
+
+    const task = (async () => {
+      try {
+        await previous;
+      } catch {
+        // ignore previous error
+      }
+      const session = this.liveSessions.get(sessionId);
+      if (session && typeof session.compact === "function") {
+        try {
+          await session.compact(instructions);
+        } catch {
+          // non-fatal
+        }
+      }
+    })();
+
+    this.sessionQueues.set(sessionId, task);
+    try {
+      await task;
+    } finally {
+      if (this.sessionQueues.get(sessionId) === task) {
+        this.sessionQueues.delete(sessionId);
+      }
+    }
+  }
+
   async disposeSession(sessionId: string): Promise<void> {
+    this.compactionCoordinator?.cancelTimer(sessionId);
     const session = this.liveSessions.get(sessionId);
     if (session) {
       this.liveSessions.delete(sessionId);
@@ -337,6 +386,7 @@ export class AgentSessionManager {
   }
 
   async disposeAll(): Promise<void> {
+    this.compactionCoordinator?.dispose();
     for (const [id, session] of this.liveSessions.entries()) {
       try {
         session.dispose();

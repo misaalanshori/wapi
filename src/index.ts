@@ -89,6 +89,7 @@ export async function main() {
     thinkingLevel: config.thinkingLevel,
     tz: config.tz,
     customSystemPrompt: config.systemPrompt,
+    compactionConfig: config.compaction,
     schedulerEngine: scheduler,
   });
 
