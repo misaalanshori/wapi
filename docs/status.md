@@ -134,3 +134,13 @@
 - [x] Created `send_file` tool registered per session with relative/absolute path resolution
 - [x] Added `send_file` to agent session tools and updated system prompt preamble
 - [x] Regression test suite (`send-file.regression.test.ts`), all gates green, deployed
+
+---
+
+## Intelligent Prompt Compaction (docs/intelligent-compaction-plan.md)
+- [x] Created clean `.env.example` with documented environment variable schemas and default values
+- [x] Configured 3-tier compaction parameters (`COMPACTION_SOFT_LIMIT_TOKENS`, `COMPACTION_IDLE_MINUTES`, `COMPACTION_TARGET_TOKENS`, `COMPACTION_HEAD_RATIO`, `COMPACTION_TAIL_RATIO`)
+- [x] Built `CompactionCoordinator` managing 15-minute debounced idle timers that reset on active conversation
+- [x] Implemented 1:3 Head-to-Tail preservation sandwich instructions, keeping ~60k tokens of verbatim tail and foundational head goals intact
+- [x] Integrated background compaction queue into `AgentSessionManager` ensuring zero mid-turn collision
+- [x] Regression test suite (`intelligent-compaction.regression.test.ts`), all gates green, deployed

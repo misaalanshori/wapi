@@ -114,3 +114,20 @@
   - `src/agent-session-manager.ts`: Registered `send_file` in `defaultFactories` and added to session tools allowlist; instructed model in system preamble on how to dispatch files to the user.
   - Added regression suite `tests/regressions/send-file.regression.test.ts` and unit tests in `tests/send-file-tool.test.ts`.
   - All 34 test files, 138 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Intelligent Prompt Compaction Architecture
+- Created `.env.example` documenting all configuration parameters with clean placeholder values (zero secret leaks).
+- Implemented 3-tier compaction architecture:
+  - Tier 1: Below 150k tokens, zero compaction runs (verbatim history preserved).
+  - Tier 2: At or above 150k tokens, a 15-minute idle countdown begins. Resets on every incoming message so active chat is never interrupted.
+  - Tier 3: Hard limit at ~950k tokens (Pi's built-in emergency recovery).
+- Compaction Sandwich:
+  - Computes 1:3 Head-to-Tail preservation ratio targeting ~80k tokens.
+  - Tail (~60k tokens) is kept 100% verbatim.
+  - Head (initial project context, goals, and user preferences) is explicitly extracted and embedded at the top of the compaction summary node.
+  - Intermediate middle discussion is summarized.
+- Implementation:
+  - `src/compaction-coordinator.ts`: Manages debounced idle timers and sandwich parameter calculations.
+  - `src/agent-session-manager.ts`: Runs background compaction serialized onto `sessionQueues` without collision.
+  - Added unit tests in `tests/compaction-coordinator.test.ts` and regression tests in `tests/regressions/intelligent-compaction.regression.test.ts`.
+  - All 36 test files, 144 tests passing. Deployed to Docker.
