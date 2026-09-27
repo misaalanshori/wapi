@@ -86,3 +86,14 @@
   - **Per-Session FIFO Queue:** `sessionQueues` promise chain ensures messages arriving for the same session are processed strictly sequentially in FIFO order without overlapping turns or stale text extraction.
   - **Parallelism preserved:** Independent sessions/chats process concurrently without blocking each other.
   - All 30 test files, 119 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Sticker Ingestion & Quoted Sticker Vision
+- Root cause:
+  - `src/message-extractor.ts` previously had zero handling for `stickerMessage`, causing incoming stickers to return `null` and drop silently at the transport layer.
+  - Quoted stickers in replies had empty text, falling back to `[media / non-text]`, and the underlying image was never downloaded or fed to multimodal vision.
+- Fixes implemented:
+  - `src/message-extractor.ts`: Ingests `stickerMessage` as `kind: "image"` with `mimeType: "image/webp"` and `text: "[User sent a sticker]"`. Quoted stickers extract with `[Sticker]` snippet and `quoted.rawMessage`.
+  - `src/media-manager.ts`: Added `stickerMessage` support to `downloadAndSaveImage`, persisting `.webp` binary files and encoding base64 image data.
+  - `src/index.ts`: When a message quotes a sticker or image without attaching a new image, it downloads the quoted sticker and feeds it into `images` for multimodal LLM vision.
+  - Added permanent regression test `tests/regressions/sticker-processing.regression.test.ts`.
+  - All 31 test files, 124 tests passing. Deployed to Docker.

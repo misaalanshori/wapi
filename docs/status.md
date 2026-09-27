@@ -109,3 +109,11 @@
 - [x] Phase R3: Rolling ambient group chatter buffer (last 15 messages)
 - [x] Phase R4: Group roster & topic/description in session preamble
 - [x] Phase R5: Verification, regression suite, and deployment
+
+---
+
+## Sticker Ingestion & Processing (docs/sticker-processing-plan.md)
+- [x] Phase S1: Extract `stickerMessage` in `src/message-extractor.ts` as `kind: "image"` with `mimeType: "image/webp"`
+- [x] Phase S2: Download and pass `.webp` stickers through `MediaManager` into `session.prompt()`
+- [x] Phase S3: Quoted sticker image download & vision prompting when replying to stickers
+- [x] Phase S4: Regression suite, typecheck, build, and deployment
