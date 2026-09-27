@@ -42,6 +42,27 @@ describe("extractMessageInfo", () => {
     const info = extractMessageInfo(msg);
     expect(info?.senderName).toBe("M Isa");
     expect(info?.senderPhone).toBe("+123456789");
+    expect(info?.senderLid).toBeUndefined();
+  });
+
+  it("handles @lid senderJid as senderLid without fake phone number prefix", () => {
+    const msg: any = {
+      key: {
+        remoteJid: "120363021644444504@g.us",
+        participant: "82003911291129:1@lid",
+        id: "msg-lid-sender",
+        fromMe: false,
+      },
+      pushName: "Habli Z.A",
+      message: {
+        conversation: "Yo",
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info?.senderName).toBe("Habli Z.A");
+    expect(info?.senderPhone).toBeUndefined();
+    expect(info?.senderLid).toBe("82003911291129");
   });
 
   it("extracts text and mentions from extendedTextMessage", () => {
@@ -82,7 +103,7 @@ describe("extractMessageInfo", () => {
         extendedTextMessage: {
           text: "@bot repeat this please",
           contextInfo: {
-            participant: "alice@s.whatsapp.net",
+            participant: "123456789@s.whatsapp.net",
             stanzaId: "target-123",
             quotedMessage: {
               conversation: "Original secret message from Alice",
@@ -95,8 +116,8 @@ describe("extractMessageInfo", () => {
     const info = extractMessageInfo(msg);
     expect(info?.quoted).toBeDefined();
     expect(info?.quoted?.text).toBe("Original secret message from Alice");
-    expect(info?.quoted?.participant).toBe("alice@s.whatsapp.net");
-    expect(info?.quoted?.phone).toBe("+alice");
+    expect(info?.quoted?.participant).toBe("123456789@s.whatsapp.net");
+    expect(info?.quoted?.phone).toBe("+123456789");
   });
 
   it("returns null for unsupported message types (e.g. sticker, poll)", () => {

@@ -6,6 +6,7 @@ export interface QuotedMessageInfo {
   stanzaId?: string;
   participant?: string;
   phone?: string;
+  lid?: string;
   text?: string;
 }
 
@@ -14,6 +15,7 @@ export interface ExtractedMessage {
   senderJid: string;
   senderName?: string;
   senderPhone?: string;
+  senderLid?: string;
   fromMe: boolean;
   messageId: string;
   kind: MessageKind;
@@ -71,9 +73,12 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
   const senderName = msg.pushName?.trim() || undefined;
 
   let senderPhone: string | undefined;
+  let senderLid: string | undefined;
   const userPart = senderJid.split("@")[0].split(":")[0];
-  if (/^\d+$/.test(userPart)) {
+  if (senderJid.endsWith("@s.whatsapp.net") && /^\d+$/.test(userPart)) {
     senderPhone = `+${userPart}`;
+  } else if (senderJid.endsWith("@lid")) {
+    senderLid = userPart;
   }
 
   const contextInfo =
@@ -88,14 +93,20 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
     const quotedText = extractMessageText({ message: contextInfo.quotedMessage } as any) ?? "";
     const quotedParticipant = contextInfo.participant;
     let quotedPhone: string | undefined;
+    let quotedLid: string | undefined;
     if (quotedParticipant) {
       const uPart = quotedParticipant.split("@")[0].split(":")[0];
-      quotedPhone = `+${uPart}`;
+      if (quotedParticipant.endsWith("@s.whatsapp.net") && /^\d+$/.test(uPart)) {
+        quotedPhone = `+${uPart}`;
+      } else if (quotedParticipant.endsWith("@lid")) {
+        quotedLid = uPart;
+      }
     }
     quoted = {
       stanzaId: contextInfo.stanzaId ?? undefined,
       participant: quotedParticipant ?? undefined,
       phone: quotedPhone,
+      lid: quotedLid,
       text: quotedText,
     };
   }
@@ -114,6 +125,7 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       senderJid,
       senderName,
       senderPhone,
+      senderLid,
       fromMe,
       messageId,
       kind: "text",
@@ -133,6 +145,7 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       senderJid,
       senderName,
       senderPhone,
+      senderLid,
       fromMe,
       messageId,
       kind: "image",
@@ -154,6 +167,7 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       senderJid,
       senderName,
       senderPhone,
+      senderLid,
       fromMe,
       messageId,
       kind: "audio",
@@ -175,6 +189,7 @@ export interface UserPromptAttributionParams {
   text: string;
   senderName?: string;
   senderPhone?: string;
+  senderLid?: string;
   isGroup: boolean;
   groupSubject?: string;
   quoted?: QuotedMessageInfo;
@@ -185,6 +200,8 @@ export function formatUserPromptWithAttribution(params: UserPromptAttributionPar
   let identity = params.senderName?.trim() || "";
   if (params.senderPhone) {
     identity = identity ? `${identity} (${params.senderPhone})` : params.senderPhone;
+  } else if (params.senderLid) {
+    identity = identity ? `${identity} (@${params.senderLid})` : `@${params.senderLid}`;
   }
   if (!identity) {
     identity = "Unknown User";
@@ -202,7 +219,8 @@ export function formatUserPromptWithAttribution(params: UserPromptAttributionPar
   }
 
   if (params.quoted) {
-    const quotedAuthor = params.quoted.phone || params.quoted.participant || "someone";
+    const quotedAuthor =
+      params.quoted.phone || (params.quoted.lid ? `@${params.quoted.lid}` : params.quoted.participant) || "someone";
     const quotedSnippet = params.quoted.text ? `"${params.quoted.text}"` : "[media / non-text]";
     prefix += `[Replying to ${quotedAuthor}: ${quotedSnippet}]\n`;
   }

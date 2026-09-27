@@ -53,6 +53,7 @@ export class WhatsAppLink {
   private readonly onGroupUpdate?: (chatJid: string) => void;
   private readonly qrHttpPort?: number;
   private readonly msgRetryCounterCache = createMemoryCacheStore();
+  private readonly knownParticipantsByChat = new Map<string, Set<string>>();
 
   private socket: WASocket | null = null;
   private retryCount = 0;
@@ -111,6 +112,21 @@ export class WhatsAppLink {
     if (this.socket?.user?.id) list.push(jidNormalizedUser(this.socket.user.id));
     if ((this.socket?.user as any)?.lid) list.push(jidNormalizedUser((this.socket!.user as any).lid));
     return list;
+  }
+
+  registerParticipant(chatJid: string, participantJid: string): void {
+    let set = this.knownParticipantsByChat.get(chatJid);
+    if (!set) {
+      set = new Set<string>();
+      this.knownParticipantsByChat.set(chatJid, set);
+    }
+    set.add(jidNormalizedUser(participantJid));
+  }
+
+  registerParticipants(chatJid: string, participantJids: string[]): void {
+    for (const p of participantJids) {
+      this.registerParticipant(chatJid, p);
+    }
   }
 
   async start(): Promise<void> {
@@ -205,6 +221,10 @@ export class WhatsAppLink {
 
       for (const rawMsg of upsert.messages) {
         try {
+          if (rawMsg?.key?.remoteJid && rawMsg?.key?.participant) {
+            this.registerParticipant(rawMsg.key.remoteJid, rawMsg.key.participant);
+          }
+
           const msgId = rawMsg?.key?.id;
           if (msgId && this.echoTracker.isSelfEcho(msgId)) {
             this.logger.debug({ msgId }, "Dropped self-echo outbound message");
@@ -263,11 +283,26 @@ export class WhatsAppLink {
     }, backoffMs);
   }
 
-  extractMentions(text: string): string[] {
+  extractMentions(text: string, chatJid?: string): string[] {
     const matches = Array.from(text.matchAll(/@(\d{7,16})\b/g));
     const set = new Set<string>();
+    const known = chatJid ? this.knownParticipantsByChat.get(chatJid) : undefined;
+
     for (const m of matches) {
-      set.add(`${m[1]}@s.whatsapp.net`);
+      const id = m[1];
+      if (known) {
+        let matched = false;
+        for (const p of known) {
+          const user = p.split("@")[0].split(":")[0];
+          if (user === id) {
+            set.add(jidNormalizedUser(p));
+            matched = true;
+            break;
+          }
+        }
+        if (matched) continue;
+      }
+      set.add(`${id}@s.whatsapp.net`);
     }
     return Array.from(set);
   }
@@ -280,7 +315,7 @@ export class WhatsAppLink {
     const messageId = generateMessageIDV2(this.socket.user?.id);
     this.echoTracker.track(messageId);
 
-    const autoMentions = this.extractMentions(text);
+    const autoMentions = this.extractMentions(text, chatJid);
     const mentions = Array.from(new Set([...autoMentions, ...(explicitMentions || [])]));
 
     await this.socket.sendMessage(

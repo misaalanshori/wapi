@@ -136,6 +136,45 @@ describe("WhatsAppLink message handling", () => {
     );
   });
 
+  it("resolves mentions to @lid when participant is known to be an @lid user", async () => {
+    const link = new WhatsAppLink({
+      authDir: "./test-auth",
+      echoTracker,
+      logger: pino({ level: "silent" }),
+      onMessage: vi.fn(),
+    });
+
+    link.attachSocketEvents(mockSocket);
+
+    // Track an inbound message from an @lid user in the group
+    events.emit("messages.upsert", {
+      type: "notify",
+      messages: [
+        {
+          key: {
+            remoteJid: "group-1@g.us",
+            participant: "82003911291129:1@lid",
+            id: "msg-lid-1",
+            fromMe: false,
+          },
+          message: { conversation: "Hello" },
+        },
+      ],
+    });
+
+    // Assistant sends message tagging the @lid user
+    await link.sendMessage("group-1@g.us", "Calling @82003911291129 for help");
+
+    expect(mockSocket.sendMessage).toHaveBeenCalledWith(
+      "group-1@g.us",
+      {
+        text: "Calling @82003911291129 for help",
+        mentions: ["82003911291129@lid"],
+      },
+      expect.anything()
+    );
+  });
+
   it("fires onGroupUpdate callback on group-participants.update and groups.update events", () => {
     const onGroupUpdate = vi.fn();
     const link = new WhatsAppLink({

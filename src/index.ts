@@ -153,6 +153,9 @@ export async function main() {
               ?.filter((p: any) => p.admin)
               ?.map((p: any) => p.id.split("@")[0].split(":")[0])
               ?.map((pn: string) => `+${pn}`);
+            if (Array.isArray(meta.participants)) {
+              waLink.registerParticipants(msg.chatJid, meta.participants.map((p: any) => p.id));
+            }
             groupMetadataCache.set(msg.chatJid, {
               count: participantCount,
               subject: groupSubject,
