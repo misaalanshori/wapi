@@ -43,3 +43,13 @@
   - `src/schedule-tool.ts`: Registered `schedule` tool (`create`, `list`, `cancel`) for Pi agent sessions.
   - Driven verification: Created live schedule in temporary session directory, verified timer firing, callback delivery, and SQLite record update.
   - All gates green: `check:types`, `test` (67 tests passing), `build`.
+
+## 2025-09-27 — Phase 4 & Cycle Complete
+- Implemented Phase 4 via TDD:
+  - `src/message-chunker.ts`: Clean splitting of long assistant outputs at ~4000 char paragraph and line boundaries, ensuring comfortable bubble length without truncation.
+  - Added named permanent regression tests in `tests/regressions/`:
+    - `long-message-chunking.regression.test.ts`: Verifies messages >4000 characters chunk into multiple bubbles without dropping text.
+    - `whitespace-command-handling.regression.test.ts`: Verifies resilient handling of irregular whitespace and newlines around `/init-session` and `/deinit-session`.
+  - Docker deployment verified: Multi-stage `Dockerfile` and `docker-compose.yml` created and built with `docker build`, verified container startup fast-fail and execution in Debian Bookworm Slim with native SQLite3/Better-SQLite3.
+  - All gates green: `check:types`, `test` (74 tests passing), `build`.
+  - Wrote cycle close-out report in `docs/report.md`.

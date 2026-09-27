@@ -1,0 +1,16 @@
+services:
+  wa-assistant:
+    build: .
+    environment:
+      SECRET_WORD: ${SECRET_WORD}
+      PROVIDER: ${PROVIDER:-opencode-go}
+      PROVIDER_API_KEY: ${PROVIDER_API_KEY}
+      PROVIDER_MODEL_ID: ${PROVIDER_MODEL_ID}
+      TZ: ${TZ:-UTC}
+      DATA_DIR: /data
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    stdin_open: true
+    tty: true

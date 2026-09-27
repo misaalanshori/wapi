@@ -56,8 +56,8 @@
 - [x] Phase 3 test suite passing
 
 ### Phase 4: Hardening & Verification
-- [ ] Long reply chunking (~4000 chars on paragraph boundaries) (§8.3)
-- [ ] Graceful shutdown handlers (SIGINT, SIGTERM)
-- [ ] Dockerfile and docker-compose.yml verification (§10)
-- [ ] Acceptance checklist verification (§dev-rules.md)
-- [ ] Final report written (`docs/report.md`)
+- [x] Long reply chunking (~4000 chars on paragraph boundaries) (§8.3)
+- [x] Graceful shutdown handlers (SIGINT, SIGTERM)
+- [x] Dockerfile and docker-compose.yml verification (§10)
+- [x] Acceptance checklist verification (§dev-rules.md)
+- [x] Final report written (`docs/report.md`)

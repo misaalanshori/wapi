@@ -12,6 +12,8 @@ import { registerSqliteStorageTool } from "./sqlite-storage.js";
 import { registerScheduleTool } from "./schedule-tool.js";
 import type { SchedulerEngine } from "./scheduler-engine.js";
 
+import { chunkMessage } from "./message-chunker.js";
+
 export interface AgentSessionManagerOptions {
   dataDir: string;
   sharedAgentDir: string;
@@ -154,7 +156,10 @@ export class AgentSessionManager {
       await (session as any).prompt(text, { streamingBehavior: "followUp" });
       const reply = session.getLastAssistantText();
       if (reply && reply.trim().length > 0) {
-        await waLink.sendMessage(chatJid, reply);
+        const chunks = chunkMessage(reply, 4000);
+        for (const chunk of chunks) {
+          await waLink.sendMessage(chatJid, chunk);
+        }
         return reply;
       }
       return null;
