@@ -1,0 +1,85 @@
+import { describe, it, expect } from "vitest";
+import { extractMessageInfo } from "../src/message-extractor.js";
+import type { proto } from "@whiskeysockets/baileys";
+
+describe("extractMessageInfo", () => {
+  it("extracts text from simple conversation message", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "123456789@s.whatsapp.net",
+        participant: undefined,
+        fromMe: false,
+        id: "msg-abc",
+      },
+      message: {
+        conversation: "Hello world",
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info).not.toBeNull();
+    expect(info?.text).toBe("Hello world");
+    expect(info?.chatJid).toBe("123456789@s.whatsapp.net");
+    expect(info?.senderJid).toBe("123456789@s.whatsapp.net");
+    expect(info?.fromMe).toBe(false);
+    expect(info?.mentionedJids).toEqual([]);
+  });
+
+  it("extracts text and mentions from extendedTextMessage", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "12345-67890@g.us",
+        participant: "sender@s.whatsapp.net",
+        fromMe: false,
+        id: "msg-ext",
+      },
+      message: {
+        extendedTextMessage: {
+          text: "@bot do this",
+          contextInfo: {
+            mentionedJid: ["bot@s.whatsapp.net"],
+          },
+        },
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info).not.toBeNull();
+    expect(info?.text).toBe("@bot do this");
+    expect(info?.chatJid).toBe("12345-67890@g.us");
+    expect(info?.senderJid).toBe("sender@s.whatsapp.net");
+    expect(info?.mentionedJids).toEqual(["bot@s.whatsapp.net"]);
+  });
+
+  it("returns null for non-text messages (e.g. image, sticker, poll)", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "123456789@s.whatsapp.net",
+        id: "msg-media",
+      },
+      message: {
+        imageMessage: {
+          caption: "Look at this",
+        },
+      },
+    };
+
+    // As per SRD §8.1: only conversation or extendedTextMessage.text are processed in this core
+    const info = extractMessageInfo(msg);
+    expect(info).toBeNull();
+  });
+
+  it("returns null if text is empty or missing", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "123456789@s.whatsapp.net",
+        id: "msg-empty",
+      },
+      message: {
+        conversation: "",
+      },
+    };
+
+    expect(extractMessageInfo(msg)).toBeNull();
+  });
+});
