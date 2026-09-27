@@ -1,7 +1,8 @@
 # WhatsApp Personal Assistant — Software Requirements & Design Document
 
 **Version:** 0.2 (incorporates locked model id, mention-gating, scheduler/cron)
-**Base technologies:** [Baileys](https://github.com/whiskeysockets/Baileys) (WhatsApp Web multi-device protocol) + [Pi](https://github.com/earendil-works/pi) (`@earendil-works/pi-coding-agent` SDK) as the agent harness
+**Base technologies:** TypeScript (Node.js 24) + [Baileys](https://github.com/whiskeysockets/Baileys) (WhatsApp Web multi-device protocol) + [Pi](https://github.com/earendil-works/pi) (`@earendil-works/pi-coding-agent` SDK) as the agent harness
+**Testing & Methodology:** Strict TDD with [Vitest](https://vitest.dev/) enforcing the test-first phase loop from `dev-rules.md`
 **Deployment unit:** a single Docker container, single WhatsApp account, single operator
 
 ---
@@ -578,6 +579,7 @@ Everything under `/data` is the entire portable state of the deployment — copy
 - **Reliability:** the process must survive a Baileys disconnect without losing in-flight Assistant Session state (Pi session transcripts are durable JSONL, written incrementally, not held only in memory). A crash mid-tool-call should, on restart, leave the Pi session resumable from its last durable checkpoint (Pi's own compaction/durability model handles this; we don't add our own).
 - **Performance:** typing indicator (`composing` presence) is sent before the Pi turn starts and cleared after, so multi-second LLM/tool latency doesn't look like a hang.
 - **Observability:** structured (pino) logs for: connection state transitions, every Addressing Gate drop (debug level only — must not be noisy), every session create/pause/resume, every schedule fire, and every tool error. No message *content* is logged above debug level, out of respect for the fact this is a personal account.
+- **Engineering & Test Discipline:** Implemented in TypeScript (Node.js 24, strict mode). Development follows TDD (Test-Driven Development) using Vitest as the test runner: every phase writes failing unit/integration tests first before touching implementation code, and all gates (`vitest run`, `tsc --noEmit`) must be green before commits.
 
 ## 12. Security & Risk Considerations
 
@@ -595,6 +597,8 @@ Everything under `/data` is the entire portable state of the deployment — copy
 - **Custom message role for scheduled wake-ups:** currently a plain `user`-role message with a text prefix (§8.5.3). Pi's `AgentMessage` supports custom roles via declaration merging if we later want the transcript/UI to visually distinguish "self-triggered" turns from real user turns — deferred as unnecessary complexity for the core.
 
 ## 14. Phased Implementation Plan
+
+All phases follow strict TDD with Vitest: failing tests are written first for each component (unit tests and mocked socket/agent integration tests), followed by minimal implementations and gate verification before commit.
 
 1. **Phase 0 — Skeleton:** Baileys connects, persists auth, shows/refreshes QR, reconnects per §8.1. No agent yet — just log every inbound message's chat/sender for manual verification of the self-echo and JID-parsing logic.
 2. **Phase 1 — Core loop:** Addressing Gate + Session Gatekeeper (§8.2) fully wired to `registry.sqlite`; `/init-session` / `/deinit-session` working end-to-end; a bare Pi `AgentSession` per Assistant Session (built-in tools only, no custom tools yet) so a simple chat round-trip works.
