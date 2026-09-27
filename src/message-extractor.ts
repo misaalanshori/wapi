@@ -1,6 +1,6 @@
 import type { proto } from "@whiskeysockets/baileys";
 
-export type MessageKind = "text" | "image" | "audio";
+export type MessageKind = "text" | "image" | "audio" | "document";
 
 export interface QuotedMessageInfo {
   stanzaId?: string;
@@ -26,6 +26,8 @@ export interface ExtractedMessage {
   rawMessage?: proto.IWebMessageInfo;
   mediaInfo?: {
     mimeType: string;
+    fileName?: string;
+    fileLength?: number;
     seconds?: number;
     isPtt?: boolean;
   };
@@ -50,6 +52,9 @@ export function extractMessageText(msg: proto.IWebMessageInfo): string | null {
     m.extendedTextMessage?.text ??
     m.imageMessage?.caption ??
     (m.stickerMessage ? (m.stickerMessage.isAnimated ? "[Animated Sticker]" : "[Sticker]") : undefined) ??
+    (m.documentMessage
+      ? m.documentMessage.caption?.trim() || `[Document: ${m.documentMessage.fileName || "document"}]`
+      : undefined) ??
     (m as any).buttonsResponseMessage?.selectedButtonId ??
     (m as any).listResponseMessage?.singleSelectReply?.selectedRowId ??
     (m as any).templateButtonReplyMessage?.selectedId;
@@ -189,6 +194,33 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
       rawMessage: msg,
       mediaInfo: {
         mimeType: m.stickerMessage.mimetype ?? "image/webp",
+      },
+    };
+  }
+
+  // 4. Document / File message
+  if (m.documentMessage) {
+    const fileName = m.documentMessage.fileName?.trim() || "document";
+    const caption = m.documentMessage.caption?.trim();
+    const text = caption || `[User sent a document: ${fileName}]`;
+    const mentionedJids = (m.documentMessage as any).contextInfo?.mentionedJid ?? [];
+    return {
+      chatJid,
+      senderJid,
+      senderName,
+      senderPhone,
+      senderLid,
+      fromMe,
+      messageId,
+      kind: "document",
+      text,
+      mentionedJids: mentionedJids.filter(Boolean) as string[],
+      quoted,
+      rawMessage: msg,
+      mediaInfo: {
+        fileName,
+        mimeType: m.documentMessage.mimetype ?? "application/octet-stream",
+        fileLength: (m.documentMessage.fileLength as any) ? Number(m.documentMessage.fileLength) : undefined,
       },
     };
   }

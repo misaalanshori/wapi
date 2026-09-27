@@ -173,6 +173,82 @@ describe("extractMessageInfo", () => {
     expect(info?.quoted?.rawMessage).toBeDefined();
   });
 
+  it("extracts documentMessage as kind document with fileName and mimeType", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "123456789@s.whatsapp.net",
+        id: "msg-doc-1",
+        fromMe: false,
+      },
+      message: {
+        documentMessage: {
+          fileName: "contract.pdf",
+          mimetype: "application/pdf",
+          fileLength: 1048576,
+          caption: "Please review this contract",
+        },
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info).not.toBeNull();
+    expect(info?.kind).toBe("document");
+    expect(info?.text).toBe("Please review this contract");
+    expect(info?.mediaInfo?.fileName).toBe("contract.pdf");
+    expect(info?.mediaInfo?.mimeType).toBe("application/pdf");
+    expect(info?.mediaInfo?.fileLength).toBe(1048576);
+  });
+
+  it("extracts documentMessage with fallback text when caption is omitted", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "123456789@s.whatsapp.net",
+        id: "msg-doc-2",
+        fromMe: false,
+      },
+      message: {
+        documentMessage: {
+          fileName: "data.csv",
+          mimetype: "text/csv",
+        },
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info?.kind).toBe("document");
+    expect(info?.text).toBe("[User sent a document: data.csv]");
+  });
+
+  it("extracts quoted document message with [Document: fileName] snippet", () => {
+    const msg: proto.IWebMessageInfo = {
+      key: {
+        remoteJid: "12345-67890@g.us",
+        participant: "sender@s.whatsapp.net",
+        fromMe: false,
+        id: "msg-reply-doc",
+      },
+      message: {
+        extendedTextMessage: {
+          text: "@bot summarize this file",
+          contextInfo: {
+            participant: "123456789@s.whatsapp.net",
+            stanzaId: "target-doc",
+            quotedMessage: {
+              documentMessage: {
+                fileName: "research.pdf",
+                mimetype: "application/pdf",
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const info = extractMessageInfo(msg);
+    expect(info?.quoted).toBeDefined();
+    expect(info?.quoted?.text).toBe("[Document: research.pdf]");
+  });
+
   it("returns null if text is empty or missing", () => {
     const msg: proto.IWebMessageInfo = {
       key: {

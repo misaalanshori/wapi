@@ -272,6 +272,39 @@ export async function main() {
             }
           }
 
+          if (decision.kind === "document" && decision.rawMessage) {
+            try {
+              const saved = await mediaManager.downloadAndSaveDocument(
+                decision.sessionId,
+                decision.rawMessage,
+                sock
+              );
+              const sizeKb = Math.round(saved.sizeBytes / 1024);
+              const docNotice = `[Attached Document: "${saved.fileName}" saved at "${saved.filePath}" (${sizeKb} KB, mime: ${saved.mimeType})]`;
+              promptText = promptText ? `${docNotice}\n${promptText}` : docNotice;
+            } catch (mediaErr) {
+              logger.error({ err: mediaErr, sessionId: decision.sessionId }, "Failed to download document message");
+              await waLink.sendMessage(msg.chatJid, "Failed to download document. Please try sending it again.");
+              return;
+            }
+          }
+
+          // If current message quotes a document, download the quoted document for the agent
+          if (quotedUnwrapped?.documentMessage && msg.quoted?.rawMessage) {
+            try {
+              const saved = await mediaManager.downloadAndSaveDocument(
+                decision.sessionId,
+                msg.quoted.rawMessage,
+                sock
+              );
+              const sizeKb = Math.round(saved.sizeBytes / 1024);
+              const quotedDocNotice = `[Quoted Document: "${saved.fileName}" saved at "${saved.filePath}" (${sizeKb} KB, mime: ${saved.mimeType})]`;
+              promptText = `${quotedDocNotice}\n${promptText}`;
+            } catch (mediaErr) {
+              logger.debug({ err: mediaErr, sessionId: decision.sessionId }, "Could not download quoted document");
+            }
+          }
+
           const ambientContext = isGroup ? chatHistoryBuffer.flushFormattedContext(msg.chatJid) : undefined;
 
           const attributedPrompt = formatUserPromptWithAttribution({

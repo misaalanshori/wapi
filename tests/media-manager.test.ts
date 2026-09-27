@@ -113,6 +113,35 @@ describe("MediaManager", () => {
     expect(res.filePath).toContain("stk-msg-1.webp");
   });
 
+  it("downloads and saves documentMessage with fileName and sizeBytes", async () => {
+    const sessionId = "uuid-doc-dl";
+    const mockBuffer = Buffer.from("%PDF-1.4 mock pdf data");
+    const mockDownloadFn = vi.fn().mockResolvedValue(mockBuffer);
+
+    const customManager = new MediaManager({
+      dataDir: tmpDir,
+      downloadFn: mockDownloadFn,
+    });
+
+    const mockRawMsg: any = {
+      key: { id: "doc-msg-1" },
+      message: {
+        documentMessage: {
+          fileName: "quarterly-report.pdf",
+          mimetype: "application/pdf",
+        },
+      },
+    };
+
+    const res = await customManager.downloadAndSaveDocument(sessionId, mockRawMsg);
+
+    expect(mockDownloadFn).toHaveBeenCalledWith(mockRawMsg);
+    expect(res.fileName).toBe("quarterly-report.pdf");
+    expect(res.mimeType).toBe("application/pdf");
+    expect(res.sizeBytes).toBe(mockBuffer.length);
+    expect(res.filePath).toContain("doc-msg-1-quarterly-report.pdf");
+  });
+
   it("rejects image exceeding maxBytes limit", async () => {
     const sessionId = "uuid-oversized";
     const bigBuffer = Buffer.alloc(2 * 1024 * 1024); // 2MB > 1MB limit

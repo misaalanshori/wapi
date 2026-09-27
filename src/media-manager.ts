@@ -10,6 +10,13 @@ export interface SavedMediaResult {
   fileName: string;
 }
 
+export interface SavedDocumentResult {
+  filePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface MediaManagerOptions {
   dataDir: string;
   maxMediaPerSession?: number;
@@ -116,6 +123,54 @@ export class MediaManager {
     }
 
     return this.saveMedia(sessionId, msgId, buffer, mimeType);
+  }
+
+  async downloadAndSaveDocument(
+    sessionId: string,
+    rawMessage: proto.IWebMessageInfo,
+    sock?: any
+  ): Promise<SavedDocumentResult> {
+    const unwrapped = unwrapMessageContent(rawMessage.message);
+    const doc = unwrapped?.documentMessage;
+    const rawFileName = doc?.fileName?.trim() || "document.bin";
+    const mimeType = doc?.mimetype || "application/octet-stream";
+    const msgId = rawMessage.key?.id || `doc-${Date.now()}`;
+
+    let buffer: Buffer;
+    if (this.downloadFn) {
+      buffer = await this.downloadFn(rawMessage);
+    } else {
+      buffer = await downloadMediaMessage(
+        rawMessage as any,
+        "buffer",
+        {},
+        {
+          logger: undefined as any,
+          reuploadRequest: sock?.updateMediaMessage,
+        }
+      );
+    }
+
+    if (buffer.length > this.maxBytes) {
+      throw new Error(`Document exceeds maximum allowed size of ${this.maxBytes} bytes`);
+    }
+
+    const mediaDir = this.getMediaDir(sessionId);
+    await fs.mkdir(mediaDir, { recursive: true });
+
+    const safeBaseName = path.basename(rawFileName).replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileName = `${msgId}-${safeBaseName}`;
+    const targetPath = path.join(mediaDir, fileName);
+
+    await fs.writeFile(targetPath, buffer);
+    await this.pruneMedia(sessionId);
+
+    return {
+      filePath: targetPath,
+      fileName: safeBaseName,
+      mimeType,
+      sizeBytes: buffer.length,
+    };
   }
 
   private async pruneMedia(sessionId: string): Promise<void> {
