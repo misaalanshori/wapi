@@ -89,6 +89,6 @@
 - [x] Phase M3 test suite passing
 
 ### Phase M4: Hardening & Regressions
-- [ ] Add regression tests (empty caption fallback, corrupted download handling, voice note in group)
-- [ ] Verify all gates (`check:types`, `vitest run`, `build`, Docker build)
-- [ ] Update `docs/journal.md` and `docs/report.md`
+- [x] Add regression tests (empty caption fallback, corrupted download handling, voice note in group)
+- [x] Verify all gates (`check:types`, `vitest run`, `build`, Docker build)
+- [x] Update `docs/journal.md` and `docs/report.md`

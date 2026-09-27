@@ -53,3 +53,11 @@
   - Docker deployment verified: Multi-stage `Dockerfile` and `docker-compose.yml` created and built with `docker build`, verified container startup fast-fail and execution in Debian Bookworm Slim with native SQLite3/Better-SQLite3.
   - All gates green: `check:types`, `test` (74 tests passing), `build`.
   - Wrote cycle close-out report in `docs/report.md`.
+
+## 2025-09-27 — Non-Text Media (Images & Audio) Complete
+- Implemented media processing plan according to `docs/media-processing-plan.md` via TDD:
+  - Phase M1: Extended `src/message-extractor.ts` to detect `image` and `audio` kinds, unpack viewOnce messages, and extract audio metadata. Updated `SessionGatekeeper` to deliver polite refusal notice for audio/voice notes in active chats while maintaining complete silence in uninitialized/unaddressed chats.
+  - Phase M2: Implemented `src/media-manager.ts` to download WhatsApp media, persist binary files to `sessions/<uuid>/media/<messageId>.<ext>`, enforce `maxBytes` (10MB) bounds, and roll-prune to `maxMediaPerSession` (50).
+  - Phase M3: Extended `AgentSessionManager.deliverMessage` to accept optional `ImageContent[]` and pass multimodal images to `session.prompt(text, { images, streamingBehavior: "followUp" })`. Connected image download and fallback prompting in `src/index.ts`.
+  - Phase M4: Added permanent regression tests for empty captions, voice note group tags, and download error recovery. Verified Docker container build.
+  - All gates green: `check:types`, `test` (90 tests passing), `build`.
