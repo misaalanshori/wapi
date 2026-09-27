@@ -106,3 +106,11 @@
   - Container Tooling: Added `poppler-utils` (`pdftotext`), `curl`, `wget` to `Dockerfile`. The agent can inspect text files via `read` tool, parse PDFs via `pdftotext`, or run scripts via `python3`.
   - Added regression test `tests/regressions/document-processing.regression.test.ts`.
   - All 32 test files, 130 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Outbound Media & File Sending (`send_file`)
+- Implemented outbound file and media sending:
+  - `src/whatsapp-link.ts`: Implemented `sendFile(chatJid, options)` using native Baileys payloads (`image`, `audio`, or `document`), auto-detecting MIME types based on file extensions and auto-parsing mentions in captions.
+  - `src/send-file-tool.ts`: Created `send_file` tool registered per session with relative/absolute path resolution, existence validation, and clean execution feedback.
+  - `src/agent-session-manager.ts`: Registered `send_file` in `defaultFactories` and added to session tools allowlist; instructed model in system preamble on how to dispatch files to the user.
+  - Added regression suite `tests/regressions/send-file.regression.test.ts` and unit tests in `tests/send-file-tool.test.ts`.
+  - All 34 test files, 138 tests passing. Deployed to Docker.

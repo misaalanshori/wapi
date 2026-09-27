@@ -126,3 +126,11 @@
 - [x] Support quoted document messages with `[Quoted Document: ...]`
 - [x] Installed `poppler-utils` (`pdftotext`), `curl`, `wget`, `python3` in Docker container
 - [x] Regression test suite (`document-processing.regression.test.ts`), all gates green, deployed
+
+---
+
+## Outbound Media & File Sending (`send_file`)
+- [x] Implemented `WhatsAppLink.sendFile` supporting images (`.png`, `.jpg`, `.webp`), audio (`.mp3`, `.ogg`, `.wav`), and documents (`.pdf`, `.csv`, `.docx`, etc.)
+- [x] Created `send_file` tool registered per session with relative/absolute path resolution
+- [x] Added `send_file` to agent session tools and updated system prompt preamble
+- [x] Regression test suite (`send-file.regression.test.ts`), all gates green, deployed
