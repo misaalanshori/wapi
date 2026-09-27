@@ -77,16 +77,12 @@
   - Phased TDD implementation strategy across 4 phases (C1–C4).
   - Completed all phases C1–C4: 29 test files, 108 tests passing, Docker deployed.
 
-## 2026-09-27 — Architecture Plan: Conversational Context, Replies & Group Situational Awareness
-- Authored formal plan in `docs/conversational-context-and-replies-plan.md` covering:
-  - Quoted message extraction: extracting `contextInfo.quotedMessage` and participant phone/name, formatting `[Replying to <User>: "<Text>"]`.
-  - Reply-to-bot triggering: extending addressing gate so swiping to reply to the bot in a group triggers a response without needing `@bot`.
-  - Rolling ambient group chatter buffer: maintaining bounded in-memory ring buffer (last 15 messages) of group chatter to give situational awareness when called.
-  - Group roster & topic/description: enriching session preamble with group topic and admin list from `groupMetadata`.
-  - Phased TDD implementation strategy across 5 phases (R1–R5).
-  - Completed all phases R1–R5:
-    - Phase R1: Quoted message extraction from Baileys `contextInfo.quotedMessage` and direct reply-to-bot triggering in `isMessageAddressed`.
-    - Phase R2: Formatted `[Replying to <Author>: "<Snippet>"]` in user turn prompts.
-    - Phase R3: Created `ChatHistoryBuffer` capturing ambient unaddressed chatter (bounded 15 items), flushing to prompt on addressed turns.
-    - Phase R4: Cached group description and admin lists in `groupMetadataCache` and injected into `buildDefaultPreamble`.
-    - Phase R5: All 30 test files and 114 tests green, multi-stage Docker image rebuilt and deployed.
+## 2026-09-27 — Synchronization & Concurrency Hardening
+- Root cause:
+  1. WhatsApp client auto-cancels `"composing"` presence after 10–15 seconds of inactivity. During long tool runs (e.g. bash queries), typing bubble disappeared.
+  2. Concurrent messages for the same chat invoked `session.prompt()` in parallel while turn was active. Second prompt returned immediately with previous turn's text or empty, while the real turn finished silently in the background until the next prompt called `getLastAssistantText()`.
+- Fixes implemented:
+  - **Presence Heartbeat:** `AgentSessionManager` sets a 7-second heartbeat repeating `sendPresenceUpdate("composing")` throughout the entire prompt lifecycle until `"paused"`.
+  - **Per-Session FIFO Queue:** `sessionQueues` promise chain ensures messages arriving for the same session are processed strictly sequentially in FIFO order without overlapping turns or stale text extraction.
+  - **Parallelism preserved:** Independent sessions/chats process concurrently without blocking each other.
+  - All 30 test files, 119 tests passing. Deployed to Docker.
