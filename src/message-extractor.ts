@@ -32,7 +32,13 @@ export function extractMessageText(msg: proto.IWebMessageInfo): string | null {
   const m = unwrapMessageContent(msg.message);
   if (!m) return null;
 
-  const text = m.conversation ?? m.extendedTextMessage?.text ?? m.imageMessage?.caption;
+  const text =
+    m.conversation ??
+    m.extendedTextMessage?.text ??
+    m.imageMessage?.caption ??
+    (m as any).buttonsResponseMessage?.selectedButtonId ??
+    (m as any).listResponseMessage?.singleSelectReply?.selectedRowId ??
+    (m as any).templateButtonReplyMessage?.selectedId;
   if (!text || text.trim().length === 0) {
     return null;
   }
@@ -54,9 +60,18 @@ export function extractMessageInfo(msg: proto.IWebMessageInfo): ExtractedMessage
   const messageId = key.id ?? "";
 
   // 1. Text message
-  const textContent = m.conversation ?? m.extendedTextMessage?.text;
+  const textContent =
+    m.conversation ??
+    m.extendedTextMessage?.text ??
+    (m as any).buttonsResponseMessage?.selectedButtonId ??
+    (m as any).listResponseMessage?.singleSelectReply?.selectedRowId ??
+    (m as any).templateButtonReplyMessage?.selectedId;
   if (textContent !== undefined && textContent !== null && textContent.trim().length > 0) {
-    const mentionedJids = m.extendedTextMessage?.contextInfo?.mentionedJid ?? [];
+    const contextInfo =
+      m.extendedTextMessage?.contextInfo ??
+      (m as any).buttonsResponseMessage?.contextInfo ??
+      (m as any).listResponseMessage?.contextInfo;
+    const mentionedJids = contextInfo?.mentionedJid ?? [];
     return {
       chatJid,
       senderJid,

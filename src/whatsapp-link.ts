@@ -11,6 +11,7 @@ import makeWASocket, {
 import type { Logger } from "pino";
 import qrcode from "qrcode-terminal";
 import fs from "fs/promises";
+import http from "node:http";
 import { EchoTracker } from "./echo-tracker.js";
 import { extractMessageInfo, type ExtractedMessage } from "./message-extractor.js";
 import { getDisconnectAction, DisconnectAction } from "./reconnect-policy.js";
@@ -25,6 +26,24 @@ export interface WhatsAppLinkOptions {
   qrHttpPort?: number;
 }
 
+export function createMemoryCacheStore() {
+  const map = new Map<string, any>();
+  return {
+    get: <T>(key: string): T | undefined => map.get(key),
+    set: (key: string, value: any): boolean => {
+      map.set(key, value);
+      return true;
+    },
+    del: (key: string): boolean => {
+      map.delete(key);
+      return true;
+    },
+    flushAll: (): void => {
+      map.clear();
+    },
+  };
+}
+
 export class WhatsAppLink {
   private readonly authDir: string;
   private readonly echoTracker: EchoTracker;
@@ -32,11 +51,15 @@ export class WhatsAppLink {
   private readonly onMessage: (msg: ExtractedMessage, sock: WASocket) => Promise<void> | void;
   private readonly onReady?: () => void;
   private readonly onGroupUpdate?: (chatJid: string) => void;
+  private readonly qrHttpPort?: number;
+  private readonly msgRetryCounterCache = createMemoryCacheStore();
 
   private socket: WASocket | null = null;
   private retryCount = 0;
   private isStopping = false;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private httpServer: http.Server | null = null;
+  private currentQrText: string | null = null;
 
   constructor(options: WhatsAppLinkOptions) {
     this.authDir = options.authDir;
@@ -45,6 +68,28 @@ export class WhatsAppLink {
     this.onMessage = options.onMessage;
     this.onReady = options.onReady;
     this.onGroupUpdate = options.onGroupUpdate;
+    this.qrHttpPort = options.qrHttpPort;
+
+    if (this.qrHttpPort) {
+      this.startHttpServer(this.qrHttpPort);
+    }
+  }
+
+  private startHttpServer(port: number): void {
+    try {
+      this.httpServer = http.createServer((_req, res) => {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        const body = this.currentQrText
+          ? `<h2>Scan QR to pair WhatsApp</h2><pre style="font-family:monospace;line-height:1;font-size:12px;">${this.currentQrText}</pre>`
+          : `<h2>WhatsApp Status</h2><p>Connected or waiting for QR code...</p>`;
+        res.end(`<!DOCTYPE html><html><body>${body}</body></html>`);
+      });
+      this.httpServer.listen(port, () => {
+        this.logger.info({ port }, "QR HTTP server listening");
+      });
+    } catch (err) {
+      this.logger.error({ err, port }, "Failed to start QR HTTP server");
+    }
   }
 
   getSocket(): WASocket | null {
@@ -75,6 +120,7 @@ export class WhatsAppLink {
           this.logger.child({ module: "baileys-keys" }) as any
         ),
       },
+      msgRetryCounterCache: this.msgRetryCounterCache,
       logger: this.logger.child({ module: "baileys" }) as any,
       printQRInTerminal: false,
     });
@@ -101,11 +147,15 @@ export class WhatsAppLink {
 
       if (qr) {
         this.logger.info("Scan the QR code below to link WhatsApp account:");
-        qrcode.generate(qr, { small: true });
+        qrcode.generate(qr, { small: true }, (ascii) => {
+          this.currentQrText = ascii;
+          console.log(ascii);
+        });
       }
 
       if (connection === "open") {
         this.retryCount = 0;
+        this.currentQrText = null;
         this.logger.info(
           { user: sock.user?.id },
           "WhatsApp connection opened successfully"
@@ -232,6 +282,15 @@ export class WhatsAppLink {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
+    }
+
+    if (this.httpServer) {
+      try {
+        this.httpServer.close();
+      } catch {
+        // ignore
+      }
+      this.httpServer = null;
     }
 
     if (this.socket) {

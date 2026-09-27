@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { WhatsAppLink } from "../src/whatsapp-link.js";
+import { WhatsAppLink, createMemoryCacheStore } from "../src/whatsapp-link.js";
 import { EchoTracker } from "../src/echo-tracker.js";
 import { EventEmitter } from "events";
 import pino from "pino";
@@ -132,5 +132,30 @@ describe("WhatsAppLink message handling", () => {
 
     events.emit("groups.update", [{ id: "group-456@g.us", subject: "New Name" }]);
     expect(onGroupUpdate).toHaveBeenCalledWith("group-456@g.us");
+  });
+
+  it("createMemoryCacheStore supports get, set, del, and flushAll", () => {
+    const cache = createMemoryCacheStore();
+    expect(cache.get("k1")).toBeUndefined();
+    cache.set("k1", 42);
+    expect(cache.get("k1")).toBe(42);
+    cache.del("k1");
+    expect(cache.get("k1")).toBeUndefined();
+    cache.set("k2", "val2");
+    cache.flushAll();
+    expect(cache.get("k2")).toBeUndefined();
+  });
+
+  it("starts and stops QR HTTP server when qrHttpPort is provided", async () => {
+    const link = new WhatsAppLink({
+      authDir: "./test-auth",
+      echoTracker,
+      logger: pino({ level: "silent" }),
+      onMessage: vi.fn(),
+      qrHttpPort: 18999,
+    });
+
+    // Verify stop shuts down HTTP server cleanly
+    await link.stop();
   });
 });

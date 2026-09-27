@@ -81,4 +81,28 @@ describe("extractMessageInfo", () => {
 
     expect(extractMessageInfo(msg)).toBeNull();
   });
+
+  it("extracts text from button responses and list responses", () => {
+    const btnMsg: proto.IWebMessageInfo = {
+      key: { remoteJid: "user@s.whatsapp.net", id: "btn-1" },
+      message: {
+        buttonsResponseMessage: {
+          selectedButtonId: "CONFIRM_ACTION",
+        },
+      },
+    };
+    expect(extractMessageInfo(btnMsg)?.text).toBe("CONFIRM_ACTION");
+
+    const listMsg: proto.IWebMessageInfo = {
+      key: { remoteJid: "user@s.whatsapp.net", id: "list-1" },
+      message: {
+        listResponseMessage: {
+          singleSelectReply: {
+            selectedRowId: "ITEM_42",
+          },
+        },
+      },
+    };
+    expect(extractMessageInfo(listMsg)?.text).toBe("ITEM_42");
+  });
 });
