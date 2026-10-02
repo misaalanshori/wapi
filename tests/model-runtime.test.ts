@@ -38,4 +38,30 @@ describe("initModelRuntime", () => {
     expect(result.model).toBe(mockModel);
     expect(result.modelRuntime).toBe(mockRuntime);
   });
+
+  it("resolves both primary model and optional fallback model", async () => {
+    const primaryModel = { id: "primary-model", provider: "my-provider" };
+    const fallbackModel = { id: "fallback-model", provider: "my-provider" };
+
+    const mockRuntime = {
+      setRuntimeApiKey: vi.fn().mockResolvedValue(undefined),
+      getModel: vi.fn((prov: string, id: string) => {
+        if (id === "primary-model") return primaryModel;
+        if (id === "fallback-model") return fallbackModel;
+        return null;
+      }),
+    };
+
+    const result = await initModelRuntime({
+      provider: "my-provider",
+      providerApiKey: "secret-key",
+      providerModelId: "primary-model",
+      fallbackModelId: "fallback-model",
+      agentHomeDir: "/tmp/agent-home",
+      runtimeFactory: async () => mockRuntime as any,
+    });
+
+    expect(result.model).toBe(primaryModel);
+    expect(result.fallbackModel).toBe(fallbackModel);
+  });
 });

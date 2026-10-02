@@ -45,13 +45,23 @@ export async function main() {
   }
 
   logger.info("Initializing Pi model runtime and checking model availability...");
-  const { modelRuntime, model } = await initModelRuntime({
+  const { modelRuntime, model, fallbackModel } = await initModelRuntime({
     provider: config.provider,
     providerApiKey: config.providerApiKey,
     providerModelId: config.providerModelId,
+    fallbackProvider: config.fallbackProvider,
+    fallbackModelId: config.fallbackModelId,
+    fallbackApiKey: config.fallbackApiKey,
     agentHomeDir,
   });
-  logger.info({ provider: config.provider, modelId: config.providerModelId }, "Model verified successfully");
+  logger.info(
+    {
+      provider: config.provider,
+      modelId: config.providerModelId,
+      fallbackModelId: config.fallbackModelId,
+    },
+    "Models verified successfully"
+  );
 
   // Initialize SQLite Session Registry
   const registryDbPath = path.join(config.dataDir, "registry.sqlite");
@@ -85,6 +95,7 @@ export async function main() {
     dataDir: config.dataDir,
     sharedAgentDir: agentHomeDir,
     model,
+    fallbackModel,
     modelRuntime,
     thinkingLevel: config.thinkingLevel,
     tz: config.tz,

@@ -93,6 +93,9 @@ export interface AgentSessionManagerOptions {
   defaultSender?: SendFileSender;
   presenceHeartbeatMs?: number;
   compactionConfig?: CompactionConfig;
+  fallbackModel?: any;
+  fallbackCheckIdleMinutes?: number;
+  fallbackCheckIdleMs?: number;
   schedulerEngine?: SchedulerEngine;
   extensionFactories?: (sessionDir: string, sessionId: string) => any[];
   sessionFactory?: (options: any) => Promise<{ session: AgentSession; [key: string]: any }>;
@@ -109,6 +112,10 @@ export class AgentSessionManager {
   private readonly customSystemPrompt?: string;
   private readonly defaultSender?: SendFileSender;
   private readonly presenceHeartbeatMs: number;
+  private readonly fallbackModel?: any;
+  private readonly fallbackCheckIdleMs: number;
+  private readonly fallbackActiveSessions = new Set<string>();
+  private readonly lastTurnTimestampBySession = new Map<string, number>();
   private readonly compactionCoordinator?: CompactionCoordinator;
   private readonly schedulerEngine?: SchedulerEngine;
   private readonly extensionFactories?: (sessionDir: string, sessionId: string) => any[];
@@ -128,6 +135,14 @@ export class AgentSessionManager {
     this.customSystemPrompt = options.customSystemPrompt;
     this.defaultSender = options.defaultSender;
     this.presenceHeartbeatMs = options.presenceHeartbeatMs ?? 7000;
+    this.fallbackModel = options.fallbackModel;
+    this.fallbackCheckIdleMs =
+      options.fallbackCheckIdleMs ??
+      (options.fallbackCheckIdleMinutes
+        ? options.fallbackCheckIdleMinutes * 60 * 1000
+        : options.compactionConfig
+        ? options.compactionConfig.idleMinutes * 60 * 1000
+        : 15 * 60 * 1000);
     if (options.compactionConfig) {
       const tailRatio = options.compactionConfig.tailRatio;
       const headRatio = options.compactionConfig.headRatio;
@@ -366,11 +381,50 @@ export class AgentSessionManager {
 
     try {
       const session = await this.getOrCreateSession(sessionId, chatJid, preambleInfo, waLink as any);
+
+      const now = Date.now();
+      const lastTurnTime = this.lastTurnTimestampBySession.get(sessionId) ?? 0;
+      this.lastTurnTimestampBySession.set(sessionId, now);
+
+      if (
+        this.fallbackActiveSessions.has(sessionId) &&
+        now - lastTurnTime >= this.fallbackCheckIdleMs &&
+        this.model &&
+        typeof (session as any).setModel === "function"
+      ) {
+        try {
+          await (session as any).setModel(this.model);
+          this.fallbackActiveSessions.delete(sessionId);
+        } catch {
+          // keep fallback if re-activating primary fails
+        }
+      }
+
       const promptOptions: any = { streamingBehavior: "followUp" };
       if (images && images.length > 0) {
         promptOptions.images = images;
       }
-      await (session as any).prompt(text, promptOptions);
+
+      try {
+        await (session as any).prompt(text, promptOptions);
+      } catch (err) {
+        if (
+          this.fallbackModel &&
+          !this.fallbackActiveSessions.has(sessionId) &&
+          typeof (session as any).setModel === "function"
+        ) {
+          try {
+            await (session as any).setModel(this.fallbackModel);
+            this.fallbackActiveSessions.add(sessionId);
+            await (session as any).prompt(text, promptOptions);
+          } catch (fallbackErr) {
+            throw fallbackErr;
+          }
+        } else {
+          throw err;
+        }
+      }
+
       const reply = session.getLastAssistantText();
 
       const tokens = session.getContextUsage?.()?.tokens;

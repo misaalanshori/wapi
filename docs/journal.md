@@ -144,3 +144,13 @@
   - Pointed the active session `aaec552f-...` back to its authoritative 136-message transcript (1.3MB) containing all prior video extraction and geoguessr analysis.
   - Added unit test in `tests/agent-manager.test.ts`.
   - All 36 test files, 148 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Fallback Model System & Dynamic Model Registration
+- Features & Bug Fixes:
+  - Fixed `.gitignore` to track `.env.example` via whitelist exclusion `!.env.example`.
+  - `src/model-runtime.ts`: Added dynamic custom model registration (`ensureCustomModelInModelsJson`) into `models.json` so custom API model IDs like `space-bunny-free` resolve directly.
+  - Implemented dual model support: primary (`space-bunny-free`) and fallback (`mimo-v2.6-flash`).
+  - `src/agent-session-manager.ts`: On primary prompt failure, catches error and calls `session.setModel(fallbackModel)`, preserving 100% transcript history and retrying turn immediately.
+  - Added idle window check: after the session has been idle for >= `COMPACTION_IDLE_MINUTES` (15m), automatically attempts to revert back to primary model.
+  - Added regression test `tests/regressions/fallback-model.regression.test.ts`.
+  - All 37 test files, 154 tests passing. Deployed to Docker.

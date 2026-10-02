@@ -311,4 +311,85 @@ describe("AgentSessionManager", () => {
 
     expect(mockWaLink.sendPresenceUpdate).toHaveBeenLastCalledWith(chatJid, "paused");
   });
+
+  it("switches to fallback model when primary prompt fails and succeeds on retry", async () => {
+    let callCount = 0;
+    const primaryModel = { id: "primary", provider: "mock" };
+    const fallbackModel = { id: "fallback", provider: "mock" };
+
+    const sessionMock: any = {
+      prompt: vi.fn(async () => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error("Primary model rate limited / 503");
+        }
+      }),
+      setModel: vi.fn().mockResolvedValue(undefined),
+      getLastAssistantText: vi.fn().mockReturnValue("Recovered with fallback"),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: primaryModel as any,
+      fallbackModel: fallbackModel as any,
+      modelRuntime: {} as any,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    const reply = await manager.deliverMessage(
+      "uuid-fallback-test",
+      "chat-fallback@s.whatsapp.net",
+      "hello",
+      mockWaLink
+    );
+
+    expect(sessionMock.setModel).toHaveBeenCalledWith(fallbackModel);
+    expect(callCount).toBe(2);
+    expect(reply).toBe("Recovered with fallback");
+  });
+
+  it("attempts to revert to primary model after idle period elapses", async () => {
+    const primaryModel = { id: "primary", provider: "mock" };
+    const fallbackModel = { id: "fallback", provider: "mock" };
+
+    let promptCount = 0;
+    const sessionMock: any = {
+      prompt: vi.fn(async () => {
+        promptCount++;
+        if (promptCount === 1) {
+          throw new Error("Temporary outage");
+        }
+      }),
+      setModel: vi.fn().mockResolvedValue(undefined),
+      getLastAssistantText: vi.fn().mockReturnValue("Reply ok"),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: primaryModel as any,
+      fallbackModel: fallbackModel as any,
+      fallbackCheckIdleMs: 50, // 50ms for test
+      modelRuntime: {} as any,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    // 1. Initial turn fails on primary -> switches to fallback
+    await manager.deliverMessage("uuid-revert-test", "chat@s.whatsapp.net", "query 1", mockWaLink);
+    expect(sessionMock.setModel).toHaveBeenCalledWith(fallbackModel);
+
+    // 2. Immediate next message within 50ms stays on fallback
+    await manager.deliverMessage("uuid-revert-test", "chat@s.whatsapp.net", "query 2", mockWaLink);
+    expect(sessionMock.setModel).toHaveBeenCalledTimes(1);
+
+    // 3. Wait for idle period to elapse (>50ms)
+    await new Promise((r) => setTimeout(r, 60));
+
+    // 4. Next message reverts back to primary model
+    await manager.deliverMessage("uuid-revert-test", "chat@s.whatsapp.net", "query 3", mockWaLink);
+    expect(sessionMock.setModel).toHaveBeenCalledWith(primaryModel);
+  });
 });

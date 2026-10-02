@@ -147,6 +147,16 @@
 
 ---
 
+## Fallback Model System & Dynamic Model Registration
+- [x] Fixed `.gitignore` to un-ignore `.env.example`
+- [x] Dynamic custom model registration (`ensureCustomModelInModelsJson`) so uncataloged models like `space-bunny-free` resolve
+- [x] Configured primary model (`space-bunny-free`) and fallback model (`mimo-v2.6-flash`)
+- [x] Seamless turn retry on fallback via `session.setModel()` preserving 100% transcript history
+- [x] Automatic re-activation of primary model after session idle window (`COMPACTION_IDLE_MINUTES`)
+- [x] Regression test suite (`fallback-model.regression.test.ts`), all gates green, deployed
+
+---
+
 ## Session Status Command (`/session`)
 - [x] Added `/session` command to `SessionGatekeeper` mirroring Pi TUI's session inspection
 - [x] Implemented `AgentSessionManager.getSessionStatusSummary` querying native Pi `session.getSessionStats()` and `session.getContextUsage()`

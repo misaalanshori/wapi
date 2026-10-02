@@ -11,6 +11,9 @@ export interface AppConfig {
   provider: string;
   providerApiKey: string;
   providerModelId: string;
+  fallbackProvider?: string;
+  fallbackModelId?: string;
+  fallbackApiKey?: string;
   dataDir: string;
   tz: string;
   logLevel: string;
@@ -55,6 +58,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const qrHttpPort = env.QR_HTTP_PORT ? parseInt(env.QR_HTTP_PORT, 10) : undefined;
   const systemPrompt = env.SYSTEM_PROMPT?.trim() || env.CUSTOM_SYSTEM_PROMPT?.trim() || undefined;
 
+  const fallbackModelId =
+    env.FALLBACK_MODEL_ID?.trim() || env.PROVIDER_FALLBACK_MODEL_ID?.trim() || undefined;
+  const rawFallbackProvider =
+    env.FALLBACK_PROVIDER?.trim() || env.PROVIDER_FALLBACK?.trim() || (fallbackModelId ? provider : undefined);
+  const fallbackProvider =
+    rawFallbackProvider?.toLowerCase() === "opencodego" ? "opencode-go" : rawFallbackProvider;
+  const fallbackApiKey =
+    env.FALLBACK_API_KEY?.trim() || env.PROVIDER_FALLBACK_API_KEY?.trim() || (fallbackModelId ? providerApiKey : undefined);
+
   const compaction: CompactionConfig = {
     softLimitTokens: env.COMPACTION_SOFT_LIMIT_TOKENS
       ? parseInt(env.COMPACTION_SOFT_LIMIT_TOKENS, 10)
@@ -78,6 +90,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     provider: provider!,
     providerApiKey: providerApiKey!,
     providerModelId: providerModelId!,
+    fallbackProvider,
+    fallbackModelId,
+    fallbackApiKey,
     dataDir: env.DATA_DIR?.trim() || "/data",
     tz: env.TZ?.trim() || "Asia/Jakarta",
     logLevel: env.LOG_LEVEL?.trim() || "info",
