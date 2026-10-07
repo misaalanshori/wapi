@@ -182,3 +182,10 @@
 - [x] Edits to `✅ _Completed (N steps)_` on turn settlement and dispatches final response as separate message
 - [x] Single-turn Q&A without tool calls does not create progress bubbles
 - [x] Regression test suite (`mid-turn-progress.regression.test.ts`), all gates green, deployed
+
+---
+
+## Image Pipeline Disambiguation & Quoted Media Tracking
+- [x] Injected explicit `[Attached Image: ... saved at ...]` path into prompt text so the agent always correlates vision tokens with the exact local disk file
+- [x] Injected explicit `[Quoted Image: ... saved at ...]` when replying to images or stickers
+- [x] Regression test suite (`image-pipeline.regression.test.ts`), all gates green, deployed

@@ -173,3 +173,14 @@
   - Simple turns without tool calls bypass progress bubbles completely.
   - Added regression test `tests/regressions/mid-turn-progress.regression.test.ts`.
   - All 39 test files, 165 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Image Pipeline Disambiguation & Quoted Image Tracking
+- Root cause:
+  - When an image arrived, `promptText` only contained `[User sent an image]` without the local file path on disk.
+  - When the agent attempted to inspect the image using bash/read/sharp tools, it ran `ls media/` and guessed the wrong file (an older image from earlier in the session), causing severe confusion and contradictions in its reasoning.
+  - Quoted images in replies also lacked explicit file path tagging.
+- Fixes implemented:
+  - `src/index.ts`: Injects `[Attached Image: "filename.jpg" saved at "/path/to/file.jpg"]` into `promptText` so the model always knows the exact disk path corresponding to the vision attachment.
+  - Quoted images inject `[Quoted Image: "filename.jpg" saved at "/path/to/file.jpg"]`.
+  - Added regression suite `tests/regressions/image-pipeline.regression.test.ts`.
+  - All 40 test files, 167 tests passing. Deployed to Docker.

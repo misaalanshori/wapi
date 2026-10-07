@@ -276,9 +276,10 @@ export async function main() {
                   mimeType: saved.mimeType,
                 },
               ];
-              if (!promptText || promptText.trim().length === 0) {
-                promptText = "[User sent an image]";
-              }
+              const imgNotice = `[Attached Image: "${saved.fileName}" saved at "${saved.filePath}"]`;
+              promptText = promptText && promptText !== "[User sent an image]"
+                ? `${imgNotice}\n${promptText}`
+                : imgNotice;
             } catch (mediaErr) {
               logger.error({ err: mediaErr, sessionId: decision.sessionId }, "Failed to download image message");
               await waLink.sendMessage(msg.chatJid, "Failed to download image. Please try sending it again.");
@@ -305,6 +306,8 @@ export async function main() {
                   mimeType: saved.mimeType,
                 },
               ];
+              const quotedImgNotice = `[Quoted Image: "${saved.fileName}" saved at "${saved.filePath}"]`;
+              promptText = `${quotedImgNotice}\n${promptText}`;
             } catch (mediaErr) {
               logger.debug(
                 { err: mediaErr, sessionId: decision.sessionId },
