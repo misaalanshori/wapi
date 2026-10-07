@@ -448,4 +448,85 @@ describe("AgentSessionManager", () => {
 
     expect(steered).toBe(false);
   });
+
+  it("sends initial progress message and edits it on subsequent mid-turn steps", async () => {
+    let subscriberCallback: any;
+    const sessionMock: any = {
+      subscribe: vi.fn((cb) => {
+        subscriberCallback = cb;
+        return () => {};
+      }),
+      prompt: vi.fn(async () => {
+        // Step 1: Assistant speaks and calls tool
+        await subscriberCallback({
+          type: "message_end",
+          message: {
+            role: "assistant",
+            stopReason: "toolUse",
+            content: [
+              { type: "text", text: "Checking database" },
+              { type: "toolCall", name: "sqlite_storage", arguments: { action: "all" } },
+            ],
+          },
+        });
+
+        // Step 2: Assistant speaks again and runs bash
+        await subscriberCallback({
+          type: "message_end",
+          message: {
+            role: "assistant",
+            stopReason: "toolUse",
+            content: [
+              { type: "text", text: "Running query" },
+              { type: "toolCall", name: "bash", arguments: { command: "curl https://api.com" } },
+            ],
+          },
+        });
+      }),
+      getLastAssistantText: vi.fn().mockReturnValue("Final answer"),
+      dispose: vi.fn(),
+    };
+
+    const mockSender = {
+      sendPresenceUpdate: vi.fn().mockResolvedValue(undefined),
+      sendMessage: vi.fn().mockResolvedValue("status-msg-1"),
+      editMessage: vi.fn().mockResolvedValue("status-msg-1"),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    const reply = await manager.deliverMessage(
+      "sess-progress",
+      "chat-progress@g.us",
+      "do multiple tasks",
+      mockSender
+    );
+
+    expect(reply).toBe("Final answer");
+    // Initial progress message sent
+    expect(mockSender.sendMessage).toHaveBeenCalledWith(
+      "chat-progress@g.us",
+      expect.stringContaining("Checking database")
+    );
+    // Subsequent step edits the message
+    expect(mockSender.editMessage).toHaveBeenCalledWith(
+      "chat-progress@g.us",
+      { remoteJid: "chat-progress@g.us", id: "status-msg-1", fromMe: true },
+      expect.stringContaining("Running query")
+    );
+    // Final completion edit
+    expect(mockSender.editMessage).toHaveBeenCalledWith(
+      "chat-progress@g.us",
+      { remoteJid: "chat-progress@g.us", id: "status-msg-1", fromMe: true },
+      expect.stringContaining("Completed")
+    );
+    // Final answer sent separately
+    expect(mockSender.sendMessage).toHaveBeenCalledWith("chat-progress@g.us", "Final answer");
+  });
 });

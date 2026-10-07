@@ -379,8 +379,64 @@ export class AgentSessionManager {
       waLink.sendPresenceUpdate(chatJid, "composing").catch(() => {});
     }, this.presenceHeartbeatMs);
 
+    let progressKey: { remoteJid: string; id: string; fromMe: boolean } | undefined;
+    const progressSteps: string[] = [];
+
+    const updateProgress = async (newStep: string) => {
+      progressSteps.push(newStep);
+      const progressText = `⏳ _Working on your request..._\n\n${progressSteps.join("\n")}`;
+      try {
+        if (!progressKey) {
+          const msgId = await waLink.sendMessage(chatJid, progressText);
+          progressKey = { remoteJid: chatJid, id: msgId, fromMe: true };
+        } else if (typeof (waLink as any).editMessage === "function") {
+          await (waLink as any).editMessage(chatJid, progressKey, progressText);
+        }
+      } catch {
+        // non-fatal progress update
+      }
+    };
+
+    let unsubscribe: (() => void) | undefined;
+
     try {
       const session = await this.getOrCreateSession(sessionId, chatJid, preambleInfo, waLink as any);
+
+      if (typeof (session as any).subscribe === "function") {
+        unsubscribe = (session as any).subscribe(async (event: any) => {
+          if (event.type === "message_end" && event.message?.role === "assistant") {
+            const msg = event.message;
+            if (msg.stopReason === "toolUse") {
+              const content = Array.isArray(msg.content) ? msg.content : [];
+              const textBlocks = content
+                .filter((c: any) => c.type === "text" && typeof c.text === "string")
+                .map((c: any) => stripTimeAwareTags(c.text).trim())
+                .filter(Boolean);
+
+              for (const t of textBlocks) {
+                const preview = t.length > 120 ? t.slice(0, 117) + "..." : t;
+                await updateProgress(`• "${preview}"`);
+              }
+
+              const toolCalls = content.filter((c: any) => c.type === "toolCall");
+              for (const tc of toolCalls) {
+                let argPreview = "";
+                if (tc.name === "bash" && tc.arguments?.command) {
+                  const cmd = String(tc.arguments.command).trim().replace(/\s+/g, " ");
+                  argPreview = `: \`${cmd.slice(0, 40)}${cmd.length > 40 ? "..." : ""}\``;
+                } else if (tc.name === "sqlite_storage" && tc.arguments?.action) {
+                  argPreview = `: ${tc.arguments.action}`;
+                } else if (tc.name === "schedule" && tc.arguments?.action) {
+                  argPreview = `: ${tc.arguments.action}`;
+                } else if (tc.name === "send_file" && tc.arguments?.filePath) {
+                  argPreview = `: ${path.basename(tc.arguments.filePath)}`;
+                }
+                await updateProgress(`• 🛠 \`${tc.name}\`${argPreview}`);
+              }
+            }
+          }
+        });
+      }
 
       const now = Date.now();
       const lastTurnTime = this.lastTurnTimestampBySession.get(sessionId) ?? 0;
@@ -442,7 +498,21 @@ export class AgentSessionManager {
       }
       return null;
     } finally {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
       clearInterval(heartbeat);
+      if (progressKey && typeof (waLink as any).editMessage === "function") {
+        try {
+          await (waLink as any).editMessage(
+            chatJid,
+            progressKey,
+            `✅ _Completed (${progressSteps.length} step${progressSteps.length === 1 ? "" : "s"})_`
+          );
+        } catch {
+          // non-fatal
+        }
+      }
       await waLink.sendPresenceUpdate(chatJid, "paused");
     }
   }

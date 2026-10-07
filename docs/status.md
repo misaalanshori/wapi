@@ -172,3 +172,13 @@
 - [x] Wired to Pi's native `session.steer()` during active streaming turns, injecting prompt before next tool call
 - [x] Fallback to normal delivery when session is idle
 - [x] Regression test suite (`steering.regression.test.ts`), all gates green, deployed
+
+---
+
+## Live Mid-Turn Progress Streaming & In-Place Message Editing
+- [x] Implemented `WhatsAppLink.editMessage` using native Baileys protocol edit payload
+- [x] Subscribed `AgentSessionManager` to Pi turn lifecycle detecting `stopReason: "toolUse"`
+- [x] Dispatches initial progress bubble on first tool call and edits in-place on subsequent steps
+- [x] Edits to `✅ _Completed (N steps)_` on turn settlement and dispatches final response as separate message
+- [x] Single-turn Q&A without tool calls does not create progress bubbles
+- [x] Regression test suite (`mid-turn-progress.regression.test.ts`), all gates green, deployed

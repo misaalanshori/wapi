@@ -290,4 +290,28 @@ describe("WhatsAppLink message handling", () => {
       await import("fs/promises").then((fs) => fs.unlink(tmpFile).catch(() => {}));
     }
   });
+
+  it("edits an existing message using editMessage with target key payload", async () => {
+    const link = new WhatsAppLink({
+      authDir: "./test-auth",
+      echoTracker,
+      logger: pino({ level: "silent" }),
+      onMessage: vi.fn(),
+    });
+
+    link.attachSocketEvents(mockSocket);
+
+    const targetKey = { remoteJid: "chat-1@s.whatsapp.net", id: "msg-orig-123", fromMe: true };
+    const editId = await link.editMessage("chat-1@s.whatsapp.net", targetKey, "Updated progress text");
+
+    expect(mockSocket.sendMessage).toHaveBeenCalledWith(
+      "chat-1@s.whatsapp.net",
+      expect.objectContaining({
+        text: "Updated progress text",
+        edit: targetKey,
+      }),
+      { messageId: editId }
+    );
+    expect(echoTracker.isSelfEcho(editId)).toBe(true);
+  });
 });

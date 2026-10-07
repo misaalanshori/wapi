@@ -162,3 +162,14 @@
   - User feedback: Sends immediate WhatsApp ack confirming steering was injected into the running turn.
   - Added regression suite `tests/regressions/steering.regression.test.ts` and unit tests in `tests/session-gatekeeper.test.ts` and `tests/agent-manager.test.ts`.
   - All 38 test files, 161 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Live Mid-Turn Progress Streaming & Message Editing
+- Implemented real-time progress updates via WhatsApp message editing:
+  - `src/whatsapp-link.ts`: Implemented `editMessage()` using Baileys native `edit` protocol payload (`{ text, edit: targetKey }`).
+  - `src/agent-session-manager.ts`: Subscribes to Pi's session event stream. When an assistant message has `stopReason === "toolUse"`, it sends an initial progress message to WhatsApp:
+    `⏳ _Working on your request..._\n• "Thinking..."\n• 🛠 toolName: args`
+  - Subsequent tool calls and intermediate assistant thoughts edit that exact message in-place in real time without spamming the chat.
+  - Upon turn completion, the progress bubble edits to `✅ _Completed (N steps)_`, and the final answer is sent as its own clean bubble.
+  - Simple turns without tool calls bypass progress bubbles completely.
+  - Added regression test `tests/regressions/mid-turn-progress.regression.test.ts`.
+  - All 39 test files, 165 tests passing. Deployed to Docker.

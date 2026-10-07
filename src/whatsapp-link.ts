@@ -414,6 +414,40 @@ export class WhatsAppLink {
     return messageId;
   }
 
+  async editMessage(
+    chatJid: string,
+    targetKey: { remoteJid: string; id: string; fromMe?: boolean },
+    newText: string
+  ): Promise<string> {
+    if (!this.socket) {
+      throw new Error("Cannot edit message: WhatsApp socket is not connected");
+    }
+
+    const editKey = {
+      remoteJid: targetKey.remoteJid || chatJid,
+      id: targetKey.id,
+      fromMe: targetKey.fromMe ?? true,
+    };
+
+    const messageId = generateMessageIDV2(this.socket.user?.id);
+    this.echoTracker.track(messageId);
+
+    const autoMentions = this.extractMentions(newText, chatJid);
+    const mentions = autoMentions.length > 0 ? autoMentions : undefined;
+
+    await this.socket.sendMessage(
+      chatJid,
+      {
+        text: newText,
+        edit: editKey,
+        mentions,
+      },
+      { messageId }
+    );
+
+    return messageId;
+  }
+
   async sendPresenceUpdate(chatJid: string, presence: "composing" | "paused"): Promise<void> {
     if (!this.socket) return;
     try {
