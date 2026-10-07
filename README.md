@@ -151,6 +151,7 @@ Solves the problem of LLM providers dropping their 5-minute KV prompt cache betw
 | `/init-session <secret> [uuid]` | Any chat | Unlocks and activates the bot in this chat. Optionally resumes a specific session UUID. |
 | `/deinit-session` | Active chat | Pauses the session and unlinks it from the chat. The bot returns to silent drop mode. |
 | `/session` | Active chat | Displays real-time session diagnostics: active context tokens, total prompt volume, cache hit rate, token counts, cost estimate, and active schedules. |
+| `/steer <instructions>` | Active chat | Injects a real-time steering message into the active turn at the next tool boundary (e.g. `/steer you can stop now`). |
 
 *(In groups with > 2 participants, commands can be sent either directly or preceded by `@bot`).*
 

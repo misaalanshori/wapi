@@ -164,6 +164,46 @@ describe("SessionGatekeeper", () => {
       expect(mockStatusHandler).toHaveBeenCalledWith(sessionId, chatJid);
     });
 
+    it("returns steer decision when receiving /steer with instructions", async () => {
+      const decision = await gatekeeper.handleMessage({
+        chatJid,
+        senderJid: "user@s.whatsapp.net",
+        text: "/steer you can stop now and summarize",
+      });
+
+      expect(decision.type).toBe("steer");
+      if (decision.type === "steer") {
+        expect(decision.sessionId).toBe(sessionId);
+        expect(decision.text).toBe("you can stop now and summarize");
+      }
+    });
+
+    it("handles @mention with /steer in groups", async () => {
+      const decision = await gatekeeper.handleMessage({
+        chatJid,
+        senderJid: "user@s.whatsapp.net",
+        text: "@bot /steer abort current search",
+      });
+
+      expect(decision.type).toBe("steer");
+      if (decision.type === "steer") {
+        expect(decision.text).toBe("abort current search");
+      }
+    });
+
+    it("replies with usage instructions when /steer is called with no arguments", async () => {
+      const decision = await gatekeeper.handleMessage({
+        chatJid,
+        senderJid: "user@s.whatsapp.net",
+        text: "/steer",
+      });
+
+      expect(decision.type).toBe("reply");
+      if (decision.type === "reply") {
+        expect(decision.text).toContain("Please provide steering instructions");
+      }
+    });
+
     it("forwards normal messages to the agent", async () => {
       const decision = await gatekeeper.handleMessage({
         chatJid,

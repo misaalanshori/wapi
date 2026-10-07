@@ -5,6 +5,7 @@ import type { MessageKind } from "./message-extractor.js";
 export type GatekeeperDecision =
   | { type: "drop" }
   | { type: "reply"; text: string; sessionId?: string }
+  | { type: "steer"; sessionId: string; text: string }
   | {
       type: "forward";
       sessionId: string;
@@ -150,6 +151,23 @@ export class SessionGatekeeper {
         type: "reply",
         text: `Active Session ID: ${activeSession.id}`,
         sessionId: activeSession.id,
+      };
+    }
+
+    const steerMatch = cleanCommand.match(/^\/steer(?:\s+(.*))?$/i);
+    if (steerMatch) {
+      const steerText = steerMatch[1]?.trim();
+      if (!steerText) {
+        return {
+          type: "reply",
+          text: "Please provide steering instructions, e.g. /steer you can stop now and summarize.",
+          sessionId: activeSession.id,
+        };
+      }
+      return {
+        type: "steer",
+        sessionId: activeSession.id,
+        text: steerText,
       };
     }
 

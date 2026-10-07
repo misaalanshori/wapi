@@ -476,6 +476,26 @@ export class AgentSessionManager {
     }
   }
 
+  async steerSession(
+    sessionId: string,
+    chatJid: string,
+    text: string,
+    waLink:
+      | WhatsAppLink
+      | {
+          sendPresenceUpdate: (chatJid: string, presence: any) => Promise<any>;
+          sendMessage: (chatJid: string, text: string) => Promise<any>;
+        }
+  ): Promise<boolean> {
+    const session = this.liveSessions.get(sessionId);
+    if (session && typeof (session as any).steer === "function" && (session as any).isStreaming) {
+      await (session as any).steer(text);
+      return true;
+    }
+    this.deliverMessage(sessionId, chatJid, text, waLink as any).catch(() => {});
+    return false;
+  }
+
   async getSessionStatusSummary(sessionId: string, chatJid: string): Promise<string> {
     const session = await this.getOrCreateSession(sessionId, chatJid);
     const stats =

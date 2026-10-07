@@ -163,3 +163,12 @@
 - [x] Displays active context token usage, total prompt volume, cache hit rate, token counts, cost estimate, and active schedules
 - [x] Fixed session persistence across Docker restarts: `SessionManager.open(meta.piSessionFile)` / `continueRecent()` instead of `SessionManager.create()`
 - [x] Unit tests and regression suite green, deployed
+
+---
+
+## Active Turn Steering (`/steer`)
+- [x] Added `/steer <instructions>` command to `SessionGatekeeper`
+- [x] Standard addressing support (`/steer` in DMs, `@bot /steer` or swipe-to-reply in groups)
+- [x] Wired to Pi's native `session.steer()` during active streaming turns, injecting prompt before next tool call
+- [x] Fallback to normal delivery when session is idle
+- [x] Regression test suite (`steering.regression.test.ts`), all gates green, deployed

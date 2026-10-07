@@ -154,3 +154,11 @@
   - Added idle window check: after the session has been idle for >= `COMPACTION_IDLE_MINUTES` (15m), automatically attempts to revert back to primary model.
   - Added regression test `tests/regressions/fallback-model.regression.test.ts`.
   - All 37 test files, 154 tests passing. Deployed to Docker.
+
+## 2026-09-27 — Real-Time Steering Command (/steer)
+- Implemented `/steer <instructions>`:
+  - `src/session-gatekeeper.ts`: Recognizes `/steer <text>` with standard addressing (`@bot /steer` in groups, direct in DMs).
+  - `src/agent-session-manager.ts`: Implemented `steerSession()`. If `session.isStreaming` is active, invokes native Pi `session.steer(text)`, immediately injecting the steering instruction into the agent loop before the next tool call. If the session is idle, routes as a new turn.
+  - User feedback: Sends immediate WhatsApp ack confirming steering was injected into the running turn.
+  - Added regression suite `tests/regressions/steering.regression.test.ts` and unit tests in `tests/session-gatekeeper.test.ts` and `tests/agent-manager.test.ts`.
+  - All 38 test files, 161 tests passing. Deployed to Docker.

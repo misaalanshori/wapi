@@ -392,4 +392,60 @@ describe("AgentSessionManager", () => {
     await manager.deliverMessage("uuid-revert-test", "chat@s.whatsapp.net", "query 3", mockWaLink);
     expect(sessionMock.setModel).toHaveBeenCalledWith(primaryModel);
   });
+
+  it("steers active streaming turn via session.steer()", async () => {
+    const sessionMock: any = {
+      isStreaming: true,
+      steer: vi.fn().mockResolvedValue("queued"),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    await manager.getOrCreateSession("sess-steer", "chat@s.whatsapp.net");
+
+    const steered = await manager.steerSession(
+      "sess-steer",
+      "chat@s.whatsapp.net",
+      "stop right now",
+      mockWaLink
+    );
+
+    expect(steered).toBe(true);
+    expect(sessionMock.steer).toHaveBeenCalledWith("stop right now");
+  });
+
+  it("delivers prompt normally when session is not streaming during steer command", async () => {
+    const sessionMock: any = {
+      isStreaming: false,
+      prompt: vi.fn().mockResolvedValue(undefined),
+      getLastAssistantText: vi.fn().mockReturnValue("Prompt response"),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    await manager.getOrCreateSession("sess-idle-steer", "chat@s.whatsapp.net");
+
+    const steered = await manager.steerSession(
+      "sess-idle-steer",
+      "chat@s.whatsapp.net",
+      "do this instead",
+      mockWaLink
+    );
+
+    expect(steered).toBe(false);
+  });
 });

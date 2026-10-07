@@ -240,6 +240,23 @@ export async function main() {
         return;
       }
 
+      if (decision.type === "steer") {
+        try {
+          const steered = await agentManager.steerSession(
+            decision.sessionId,
+            msg.chatJid,
+            decision.text,
+            waLink
+          );
+          if (steered) {
+            await waLink.sendMessage(msg.chatJid, `Steering active turn: "${decision.text}"`);
+          }
+        } catch (err) {
+          logger.error({ err, sessionId: decision.sessionId }, "Error steering agent session");
+        }
+        return;
+      }
+
       if (decision.type === "forward") {
         try {
           let images: ImageContent[] | undefined;
