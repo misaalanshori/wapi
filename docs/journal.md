@@ -182,3 +182,12 @@
   - Quoted images inject `[Quoted Image: "filename.jpg" saved at "/path/to/file.jpg"]`.
   - Added regression suite `tests/regressions/image-pipeline.regression.test.ts`.
   - All 40 test files, 167 tests passing. Deployed to Docker.
+
+## 2026-10-10 — Container Tooling & Automation Suite Preinstalled
+- Upgraded production `Dockerfile` to bake in full agent tool stack:
+  - **APT Packages:** `tmux`, `ffmpeg`, `imagemagick`, `tesseract-ocr` (with Indonesian language pack `tesseract-ocr-ind`), `libimage-exiftool-perl`, `jq`, `yq`, `ripgrep`, `fd-find` (symlinked to `/usr/local/bin/fd`), `fzf`, `sqlite3`, `unzip`, `zip`, `p7zip-full`, `pandoc`, `poppler-utils`, `qpdf`, `dnsutils`, `whois`, `nmap`, `netcat-openbsd`, `mtr-tiny`, `traceroute`, `httpie`, `wget`, `curl`, `aria2`, `lynx`, `w3m`, `tree`, `file`, `bc`, `xxd`, `hexdump`, `rsync`, `zstd`, `brotli`, `htop`, `espeak-ng`, `sox`, `python3-pip`, `python3-venv`.
+  - **Python Stack:** `playwright`, `requests>=2.32`, `httpx`, `beautifulsoup4`, `lxml`, `lxml_html_clean`, `trafilatura`, `pandas`, `openpyxl`, `matplotlib`, `pillow`, `pytesseract`, `pyyaml`, `rich`, `tqdm`, `selenium`.
+  - **Playwright Chromium:** Full headless browser with OS dependencies preinstalled under `/ms-playwright` with global access (`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`).
+  - **Global Node Packages:** `playwright`, `ws`, `axios`, `cheerio` with global lookup enabled via `NODE_PATH=/usr/local/lib/node_modules`.
+  - Verified headless Chromium launches cleanly, all python imports pass, and node requires resolve.
+  - Deployed live to container `wapi-wa-assistant-1`.

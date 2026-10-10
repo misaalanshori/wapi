@@ -190,3 +190,13 @@
 - [x] Injected explicit `[Attached Image: ... saved at ...]` path into prompt text so the agent always correlates vision tokens with the exact local disk file
 - [x] Injected explicit `[Quoted Image: ... saved at ...]` when replying to images or stickers
 - [x] Regression test suite (`image-pipeline.regression.test.ts`), all gates green, deployed
+
+---
+
+## Preinstalled Container Tooling Suite
+- [x] Preinstalled all requested system APT tools (`tmux`, `ffmpeg`, `imagemagick`, `tesseract-ocr`, `tesseract-ocr-ind`, `jq`, `yq`, `ripgrep`, `fd-find`, `fzf`, `sqlite3`, `unzip`, `zip`, `p7zip-full`, `pandoc`, `poppler-utils`, `qpdf`, `dnsutils`, `whois`, `nmap`, `netcat-openbsd`, `mtr-tiny`, `traceroute`, `httpie`, `wget`, `curl`, `aria2`, `lynx`, `w3m`, `tree`, `file`, `bc`, `xxd`, `hexdump`, `rsync`, `zstd`, `brotli`, `htop`, `espeak-ng`, `sox`, `python3-pip`, `python3-venv`)
+- [x] Linked `/usr/local/bin/fd` -> `/usr/bin/fdfind`
+- [x] Preinstalled Python automation & research stack (`playwright`, `requests>=2.32`, `httpx`, `beautifulsoup4`, `lxml`, `lxml_html_clean`, `trafilatura`, `pandas`, `openpyxl`, `matplotlib`, `pillow`, `pytesseract`, `pyyaml`, `rich`, `tqdm`, `selenium`)
+- [x] Preinstalled Chromium browser & dependencies for Playwright (`python3 -m playwright install --with-deps chromium`) with `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`
+- [x] Preinstalled global Node packages (`playwright`, `ws`, `axios`, `cheerio`) with `NODE_PATH=/usr/local/lib/node_modules`
+- [x] Verified tool execution, test suites green, Docker deployed
