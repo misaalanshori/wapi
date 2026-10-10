@@ -163,16 +163,14 @@
   - Added regression suite `tests/regressions/steering.regression.test.ts` and unit tests in `tests/session-gatekeeper.test.ts` and `tests/agent-manager.test.ts`.
   - All 38 test files, 161 tests passing. Deployed to Docker.
 
-## 2026-09-27 — Live Mid-Turn Progress Streaming & Message Editing
-- Implemented real-time progress updates via WhatsApp message editing:
-  - `src/whatsapp-link.ts`: Implemented `editMessage()` using Baileys native `edit` protocol payload (`{ text, edit: targetKey }`).
-  - `src/agent-session-manager.ts`: Subscribes to Pi's session event stream. When an assistant message has `stopReason === "toolUse"`, it sends an initial progress message to WhatsApp:
-    `⏳ _Working on your request..._\n• "Thinking..."\n• 🛠 toolName: args`
-  - Subsequent tool calls and intermediate assistant thoughts edit that exact message in-place in real time without spamming the chat.
-  - Upon turn completion, the progress bubble edits to `✅ _Completed (N steps)_`, and the final answer is sent as its own clean bubble.
-  - Simple turns without tool calls bypass progress bubbles completely.
-  - Added regression test `tests/regressions/mid-turn-progress.regression.test.ts`.
-  - All 39 test files, 165 tests passing. Deployed to Docker.
+## 2026-09-27 — Live Mid-Turn Progress Streaming & Debounce Thresholds
+- Implemented real-time progress updates via WhatsApp message editing with configurable thresholds:
+  - Added debounce controls: `PROGRESS_MIN_STEPS` (default: 3 turns) and `PROGRESS_MIN_SECONDS` (default: 90s).
+  - Quick tasks finishing in <= 3 turns or under 90s remain completely silent with zero progress bubbles, delivering only the final response directly.
+  - Multi-step tasks exceeding 3 turns (turn 4+) or taking >= 90s send an initial progress bubble and edit it in-place on subsequent steps.
+  - Upon completion, the progress bubble edits to `✅ _Completed (N turns)_`, and the final answer is sent cleanly below it.
+  - Configurable via `.env` (`PROGRESS_MIN_STEPS=0` disables the delay and shows immediately).
+  - All 40 test files, 169 tests passing. Deployed to Docker.
 
 ## 2026-09-27 — Image Pipeline Disambiguation & Quoted Image Tracking
 - Root cause:

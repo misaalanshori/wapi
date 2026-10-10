@@ -498,6 +498,7 @@ describe("AgentSessionManager", () => {
       sharedAgentDir: path.join(tmpDir, "agent-home"),
       model: { id: "test", provider: "mock" } as any,
       modelRuntime: {} as any,
+      progressMinSteps: 0,
       sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
     });
 
@@ -528,5 +529,116 @@ describe("AgentSessionManager", () => {
     );
     // Final answer sent separately
     expect(mockSender.sendMessage).toHaveBeenCalledWith("chat-progress@g.us", "Final answer");
+  });
+
+  it("hides progress message when task finishes within progressMinSteps (e.g. 2 steps <= 3)", async () => {
+    let subscriberCallback: any;
+    const sessionMock: any = {
+      subscribe: vi.fn((cb) => {
+        subscriberCallback = cb;
+        return () => {};
+      }),
+      prompt: vi.fn(async () => {
+        // Step 1
+        await subscriberCallback({
+          type: "message_end",
+          message: {
+            role: "assistant",
+            stopReason: "toolUse",
+            content: [
+              { type: "text", text: "Quick check 1" },
+              { type: "toolCall", name: "sqlite_storage", arguments: { action: "schema" } },
+            ],
+          },
+        });
+        // Step 2
+        await subscriberCallback({
+          type: "message_end",
+          message: {
+            role: "assistant",
+            stopReason: "toolUse",
+            content: [
+              { type: "text", text: "Quick check 2" },
+              { type: "toolCall", name: "bash", arguments: { command: "date" } },
+            ],
+          },
+        });
+      }),
+      getLastAssistantText: vi.fn().mockReturnValue("Quick final answer"),
+      dispose: vi.fn(),
+    };
+
+    const mockSender = {
+      sendPresenceUpdate: vi.fn().mockResolvedValue(undefined),
+      sendMessage: vi.fn().mockResolvedValue("msg-id"),
+      editMessage: vi.fn().mockResolvedValue("msg-id"),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      progressMinSteps: 3, // threshold is 3
+      progressMinSeconds: 90,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    const reply = await manager.deliverMessage("sess-quiet", "chat@g.us", "quick task", mockSender);
+    expect(reply).toBe("Quick final answer");
+
+    // Zero progress bubbles sent, zero edit calls
+    expect(mockSender.editMessage).not.toHaveBeenCalled();
+    // Only final answer sent
+    expect(mockSender.sendMessage).toHaveBeenCalledTimes(1);
+    expect(mockSender.sendMessage).toHaveBeenCalledWith("chat@g.us", "Quick final answer");
+  });
+
+  it("shows progress message when task takes more than progressMinSteps (e.g. 4 steps > 3)", async () => {
+    let subscriberCallback: any;
+    const sessionMock: any = {
+      subscribe: vi.fn((cb) => {
+        subscriberCallback = cb;
+        return () => {};
+      }),
+      prompt: vi.fn(async () => {
+        for (let i = 1; i <= 4; i++) {
+          await subscriberCallback({
+            type: "message_end",
+            message: {
+              role: "assistant",
+              stopReason: "toolUse",
+              content: [
+                { type: "text", text: `Step ${i}` },
+                { type: "toolCall", name: "bash", arguments: { command: `step-${i}` } },
+              ],
+            },
+          });
+        }
+      }),
+      getLastAssistantText: vi.fn().mockReturnValue("Long task answer"),
+      dispose: vi.fn(),
+    };
+
+    const mockSender = {
+      sendPresenceUpdate: vi.fn().mockResolvedValue(undefined),
+      sendMessage: vi.fn().mockResolvedValue("prog-id"),
+      editMessage: vi.fn().mockResolvedValue("prog-id"),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model: { id: "test", provider: "mock" } as any,
+      modelRuntime: {} as any,
+      progressMinSteps: 3,
+      sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
+    });
+
+    await manager.deliverMessage("sess-verbose", "chat@g.us", "long task", mockSender);
+
+    // Progress bubble sent because step 4 > 3
+    expect(mockSender.sendMessage).toHaveBeenCalledWith("chat@g.us", expect.stringContaining("Step 1"));
+    expect(mockSender.editMessage).toHaveBeenCalled();
   });
 });

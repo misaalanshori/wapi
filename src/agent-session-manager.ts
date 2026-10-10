@@ -92,6 +92,8 @@ export interface AgentSessionManagerOptions {
   customSystemPrompt?: string;
   defaultSender?: SendFileSender;
   presenceHeartbeatMs?: number;
+  progressMinSteps?: number;
+  progressMinSeconds?: number;
   compactionConfig?: CompactionConfig;
   fallbackModel?: any;
   fallbackCheckIdleMinutes?: number;
@@ -112,6 +114,8 @@ export class AgentSessionManager {
   private readonly customSystemPrompt?: string;
   private readonly defaultSender?: SendFileSender;
   private readonly presenceHeartbeatMs: number;
+  private readonly progressMinSteps: number;
+  private readonly progressMinSeconds: number;
   private readonly fallbackModel?: any;
   private readonly fallbackCheckIdleMs: number;
   private readonly fallbackActiveSessions = new Set<string>();
@@ -135,6 +139,8 @@ export class AgentSessionManager {
     this.customSystemPrompt = options.customSystemPrompt;
     this.defaultSender = options.defaultSender;
     this.presenceHeartbeatMs = options.presenceHeartbeatMs ?? 7000;
+    this.progressMinSteps = options.progressMinSteps ?? 3;
+    this.progressMinSeconds = options.progressMinSeconds ?? 90;
     this.fallbackModel = options.fallbackModel;
     this.fallbackCheckIdleMs =
       options.fallbackCheckIdleMs ??
@@ -375,15 +381,28 @@ export class AgentSessionManager {
     preambleInfo?: Partial<SessionPreambleInfo>
   ): Promise<string | null> {
     await waLink.sendPresenceUpdate(chatJid, "composing");
-    const heartbeat = setInterval(() => {
-      waLink.sendPresenceUpdate(chatJid, "composing").catch(() => {});
-    }, this.presenceHeartbeatMs);
-
     let progressKey: { remoteJid: string; id: string; fromMe: boolean } | undefined;
     const progressSteps: string[] = [];
+    let turnsCount = 0;
+    const startTime = Date.now();
 
-    const updateProgress = async (newStep: string) => {
-      progressSteps.push(newStep);
+    const shouldShowProgress = () => {
+      if (this.progressMinSteps === 0 || this.progressMinSeconds === 0) {
+        return true;
+      }
+      if (turnsCount > this.progressMinSteps) {
+        return true;
+      }
+      if (Date.now() - startTime >= this.progressMinSeconds * 1000 && turnsCount >= 1) {
+        return true;
+      }
+      return false;
+    };
+
+    const flushProgress = async () => {
+      if (!shouldShowProgress() || progressSteps.length === 0) {
+        return;
+      }
       const progressText = `⏳ _Working on your request..._\n\n${progressSteps.join("\n")}`;
       try {
         if (!progressKey) {
@@ -397,6 +416,13 @@ export class AgentSessionManager {
       }
     };
 
+    const heartbeat = setInterval(() => {
+      waLink.sendPresenceUpdate(chatJid, "composing").catch(() => {});
+      if (!progressKey && shouldShowProgress() && progressSteps.length >= 1) {
+        flushProgress().catch(() => {});
+      }
+    }, this.presenceHeartbeatMs);
+
     let unsubscribe: (() => void) | undefined;
 
     try {
@@ -407,6 +433,7 @@ export class AgentSessionManager {
           if (event.type === "message_end" && event.message?.role === "assistant") {
             const msg = event.message;
             if (msg.stopReason === "toolUse") {
+              turnsCount++;
               const content = Array.isArray(msg.content) ? msg.content : [];
               const textBlocks = content
                 .filter((c: any) => c.type === "text" && typeof c.text === "string")
@@ -415,7 +442,7 @@ export class AgentSessionManager {
 
               for (const t of textBlocks) {
                 const preview = t.length > 120 ? t.slice(0, 117) + "..." : t;
-                await updateProgress(`• "${preview}"`);
+                progressSteps.push(`• "${preview}"`);
               }
 
               const toolCalls = content.filter((c: any) => c.type === "toolCall");
@@ -431,8 +458,10 @@ export class AgentSessionManager {
                 } else if (tc.name === "send_file" && tc.arguments?.filePath) {
                   argPreview = `: ${path.basename(tc.arguments.filePath)}`;
                 }
-                await updateProgress(`• 🛠 \`${tc.name}\`${argPreview}`);
+                progressSteps.push(`• 🛠 \`${tc.name}\`${argPreview}`);
               }
+
+              await flushProgress();
             }
           }
         });
@@ -507,7 +536,7 @@ export class AgentSessionManager {
           await (waLink as any).editMessage(
             chatJid,
             progressKey,
-            `✅ _Completed (${progressSteps.length} step${progressSteps.length === 1 ? "" : "s"})_`
+            `✅ _Completed (${turnsCount} turn${turnsCount === 1 ? "" : "s"})_`
           );
         } catch {
           // non-fatal

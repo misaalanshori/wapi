@@ -65,6 +65,7 @@ describe("Mid-Turn Progress Streaming Regression Suite", () => {
       sharedAgentDir: path.join(tmpDir, "agent-home"),
       model: { id: "test", provider: "mock" } as any,
       modelRuntime: {} as any,
+      progressMinSteps: 0,
       sessionFactory: vi.fn().mockResolvedValue({ session: sessionMock }),
     });
 

@@ -101,6 +101,8 @@ export async function main() {
     tz: config.tz,
     customSystemPrompt: config.systemPrompt,
     compactionConfig: config.compaction,
+    progressMinSteps: config.progressMinSteps,
+    progressMinSeconds: config.progressMinSeconds,
     schedulerEngine: scheduler,
   });
 

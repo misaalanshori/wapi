@@ -89,12 +89,16 @@ describe("loadConfig", () => {
     expect(defaultConfig.compaction.targetTokens).toBe(80000);
     expect(defaultConfig.compaction.headRatio).toBe(1);
     expect(defaultConfig.compaction.tailRatio).toBe(3);
+    expect(defaultConfig.progressMinSteps).toBe(3);
+    expect(defaultConfig.progressMinSeconds).toBe(90);
 
     process.env.COMPACTION_SOFT_LIMIT_TOKENS = "200000";
     process.env.COMPACTION_IDLE_MINUTES = "30";
     process.env.COMPACTION_TARGET_TOKENS = "100000";
     process.env.COMPACTION_HEAD_RATIO = "2";
     process.env.COMPACTION_TAIL_RATIO = "5";
+    process.env.PROGRESS_MIN_STEPS = "5";
+    process.env.PROGRESS_MIN_SECONDS = "120";
 
     const customConfig = loadConfig();
     expect(customConfig.compaction.softLimitTokens).toBe(200000);
@@ -102,5 +106,7 @@ describe("loadConfig", () => {
     expect(customConfig.compaction.targetTokens).toBe(100000);
     expect(customConfig.compaction.headRatio).toBe(2);
     expect(customConfig.compaction.tailRatio).toBe(5);
+    expect(customConfig.progressMinSteps).toBe(5);
+    expect(customConfig.progressMinSeconds).toBe(120);
   });
 });

@@ -179,7 +179,8 @@
 - [x] Implemented `WhatsAppLink.editMessage` using native Baileys protocol edit payload
 - [x] Subscribed `AgentSessionManager` to Pi turn lifecycle detecting `stopReason: "toolUse"`
 - [x] Dispatches initial progress bubble on first tool call and edits in-place on subsequent steps
-- [x] Edits to `✅ _Completed (N steps)_` on turn settlement and dispatches final response as separate message
+- [x] Configurable debounce threshold (`PROGRESS_MIN_STEPS` default 3, `PROGRESS_MIN_SECONDS` default 90): tasks finishing within 3 turns or under 90s do not emit progress bubbles
+- [x] Edits to `✅ _Completed (N turns)_` on turn settlement and dispatches final response as separate message
 - [x] Single-turn Q&A without tool calls does not create progress bubbles
 - [x] Regression test suite (`mid-turn-progress.regression.test.ts`), all gates green, deployed
 

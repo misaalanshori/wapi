@@ -22,6 +22,8 @@ export interface AppConfig {
   minScheduleIntervalSeconds: number;
   maxSchedulesPerSession: number;
   qrHttpPort?: number;
+  progressMinSteps: number;
+  progressMinSeconds: number;
   compaction: CompactionConfig;
 }
 
@@ -56,6 +58,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     : 25;
 
   const qrHttpPort = env.QR_HTTP_PORT ? parseInt(env.QR_HTTP_PORT, 10) : undefined;
+  const progressMinSteps = env.PROGRESS_MIN_STEPS !== undefined ? parseInt(env.PROGRESS_MIN_STEPS, 10) : 3;
+  const progressMinSeconds = env.PROGRESS_MIN_SECONDS !== undefined ? parseInt(env.PROGRESS_MIN_SECONDS, 10) : 90;
   const systemPrompt = env.SYSTEM_PROMPT?.trim() || env.CUSTOM_SYSTEM_PROMPT?.trim() || undefined;
 
   const fallbackModelId =
@@ -101,6 +105,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     minScheduleIntervalSeconds,
     maxSchedulesPerSession,
     qrHttpPort,
+    progressMinSteps,
+    progressMinSeconds,
     compaction,
   };
 }
