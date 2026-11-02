@@ -118,6 +118,9 @@ export async function main() {
     onSessionStatus: async (sessionId, chatJid) => {
       return agentManager.getSessionStatusSummary(sessionId, chatJid);
     },
+    onOllamaCommand: async (cmd, chatJid) => {
+      return agentManager.handleOllamaCommand(cmd, chatJid);
+    },
   });
 
   const echoTracker = new EchoTracker();

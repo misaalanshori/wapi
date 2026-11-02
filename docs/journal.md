@@ -191,3 +191,24 @@
   - **Global Node Packages:** `playwright`, `ws`, `axios`, `cheerio` with global lookup enabled via `NODE_PATH=/usr/local/lib/node_modules`.
   - Verified headless Chromium launches cleanly, all python imports pass, and node requires resolve.
   - Deployed live to container `wapi-wa-assistant-1`.
+
+## 2026-10-10 — OpenDesign Cloud & Ollama Provider Integration
+- Integrated `pi-opendesigncloud` (OpenDesign AI models provider) and `pi-ollama` (unified local + cloud Ollama):
+  - `src/providers/opendesign.ts`:
+    - Provider ID: `opendesign` (`https://amr-link.open-design.ai/v1`).
+    - Full default catalog: `deepseek-v4.1-flash`, `deepseek-v4-flash`, `deepseek-v4-flash-vision-exp`, `deepseek-v4-pro`, `claude-haiku-5.5`, `glm-5.3-flash`, `glm-5.3-flashx`, `gpt-6-luna`, `kimi-k2.7-code`, `mimo-v2.6-flash`, `mimo-v2.6-pro`.
+    - Dynamic discovery via `refreshOpenDesignModels()`.
+    - Extension factory `createOpenDesignExtension()` registering provider into Pi session.
+  - `src/providers/ollama.ts`:
+    - Local Ollama provider: `ollama` (`http://localhost:11434/v1`).
+    - Ollama Cloud provider: `ollama-cloud` (`https://ollama.com/v1`).
+    - Automatic context-window resolution (1M for deepseek-v4, 256k for kimi/qwen3, 128k default).
+    - Accurate capability detection: reasoning detection (`hasReasoningCapability`) and vision detection (`hasVisionCapability`).
+    - Extension factory `createOllamaExtension()` registering providers and commands.
+    - CLI command handler `executeOllamaCli()` powering `/ollama`, `/ollama status`, `/ollama models`, `/ollama info <model>`.
+  - `src/model-runtime.ts`:
+    - `registerSupportedProviders()` ensures `ModelRuntime` automatically resolves `opendesign`, `ollama`, and `ollama-cloud` at boot time without failing fast or requiring manual JSON tampering.
+  - `src/session-gatekeeper.ts` & `src/agent-session-manager.ts`:
+    - Routes `/ollama` commands in active chats directly to `handleOllamaCommand()`, allowing users to check Ollama health and model context sizes straight from WhatsApp.
+  - Added unit test suites (`tests/opendesign-provider.test.ts`, `tests/ollama-provider.test.ts`) and regression suite (`tests/regressions/providers-opendesign-ollama.regression.test.ts`).
+  - All 43 test files, 181/181 tests passing. Tree clean.

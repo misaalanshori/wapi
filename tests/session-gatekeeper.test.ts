@@ -164,6 +164,28 @@ describe("SessionGatekeeper", () => {
       expect(mockStatusHandler).toHaveBeenCalledWith(sessionId, chatJid);
     });
 
+    it("returns formatted ollama reply when receiving /ollama or /ollama-status", async () => {
+      const mockOllamaHandler = vi.fn().mockResolvedValue("🦙 *Ollama Status*\n• Local: Connected");
+      const gk = new SessionGatekeeper({
+        secretWord: SECRET,
+        registry,
+        sessionExistsOnDisk: () => true,
+        onOllamaCommand: mockOllamaHandler,
+      });
+
+      const decision = await gk.handleMessage({
+        chatJid,
+        senderJid: "user@s.whatsapp.net",
+        text: "/ollama status",
+      });
+
+      expect(decision.type).toBe("reply");
+      if (decision.type === "reply") {
+        expect(decision.text).toContain("Ollama Status");
+      }
+      expect(mockOllamaHandler).toHaveBeenCalledWith("/ollama status", chatJid);
+    });
+
     it("returns steer decision when receiving /steer with instructions", async () => {
       const decision = await gatekeeper.handleMessage({
         chatJid,

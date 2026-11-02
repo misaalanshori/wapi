@@ -29,8 +29,18 @@ export interface AppConfig {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const secretWord = env.SECRET_WORD?.trim();
-  const provider = env.PROVIDER?.trim();
-  const providerApiKey = env.PROVIDER_API_KEY?.trim();
+  const rawProvider = env.PROVIDER?.trim();
+  const provider =
+    rawProvider?.toLowerCase() === "opencodego"
+      ? "opencode-go"
+      : rawProvider?.toLowerCase() === "opendesign"
+      ? "opendesign"
+      : rawProvider?.toLowerCase() === "ollama"
+      ? "ollama"
+      : rawProvider?.toLowerCase() === "ollama-cloud" || rawProvider?.toLowerCase() === "ollamacloud"
+      ? "ollama-cloud"
+      : rawProvider;
+  const providerApiKey = env.PROVIDER_API_KEY?.trim() || env.OPENDESIGN_API_KEY?.trim() || env.OLLAMA_API_KEY?.trim() || (provider === "ollama" ? "ollama" : undefined);
   const providerModelId = env.PROVIDER_MODEL_ID?.trim();
 
   const missing: string[] = [];
@@ -67,7 +77,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const rawFallbackProvider =
     env.FALLBACK_PROVIDER?.trim() || env.PROVIDER_FALLBACK?.trim() || (fallbackModelId ? provider : undefined);
   const fallbackProvider =
-    rawFallbackProvider?.toLowerCase() === "opencodego" ? "opencode-go" : rawFallbackProvider;
+    rawFallbackProvider?.toLowerCase() === "opencodego"
+      ? "opencode-go"
+      : rawFallbackProvider?.toLowerCase() === "opendesign"
+      ? "opendesign"
+      : rawFallbackProvider?.toLowerCase() === "ollama"
+      ? "ollama"
+      : rawFallbackProvider?.toLowerCase() === "ollama-cloud" || rawFallbackProvider?.toLowerCase() === "ollamacloud"
+      ? "ollama-cloud"
+      : rawFallbackProvider;
   const fallbackApiKey =
     env.FALLBACK_API_KEY?.trim() || env.PROVIDER_FALLBACK_API_KEY?.trim() || (fallbackModelId ? providerApiKey : undefined);
 

@@ -200,3 +200,19 @@
 - [x] Preinstalled Chromium browser & dependencies for Playwright (`python3 -m playwright install --with-deps chromium`) with `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`
 - [x] Preinstalled global Node packages (`playwright`, `ws`, `axios`, `cheerio`) with `NODE_PATH=/usr/local/lib/node_modules`
 - [x] Verified tool execution, test suites green, Docker deployed
+
+---
+
+## OpenDesign Cloud & Ollama Provider Integration
+- [x] Integrated `pi-opendesigncloud` provider (`src/providers/opendesign.ts`):
+  - Provider `opendesign` (`https://amr-link.open-design.ai/v1`)
+  - Full catalog support (`deepseek-v4.1-flash`, `deepseek-v4-flash`, `deepseek-v4-flash-vision-exp`, `deepseek-v4-pro`, `claude-haiku-5.5`, `glm-5.3-flash`, `glm-5.3-flashx`, `gpt-6-luna`, `kimi-k2.7-code`, `mimo-v2.6-flash`, `mimo-v2.6-pro`)
+  - Dynamic discovery via `refreshOpenDesignModels`
+- [x] Integrated `pi-ollama` provider & tooling (`src/providers/ollama.ts`):
+  - Local Ollama provider `ollama` (`http://localhost:11434/v1`)
+  - Ollama Cloud provider `ollama-cloud` (`https://ollama.com/v1`)
+  - Accurate context-window heuristics (1M for deepseek-v4, 256k for kimi/qwen3, 128k default)
+  - Reasoning detection (`hasReasoningCapability`) and vision detection
+  - Chat commands: `/ollama`, `/ollama status`, `/ollama models`, `/ollama info <model>` routed via `SessionGatekeeper`
+- [x] Wired extensions into `ModelRuntime` resolution at startup and `AgentSession` factory
+- [x] Regression test suite (`tests/regressions/providers-opendesign-ollama.regression.test.ts`), all gates green

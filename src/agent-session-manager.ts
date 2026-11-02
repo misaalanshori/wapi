@@ -17,6 +17,8 @@ import { chunkMessage } from "./message-chunker.js";
 import { createTimeAwareExtension, stripTimeAwareTags } from "pi-time-aware";
 import { CompactionCoordinator } from "./compaction-coordinator.js";
 import type { CompactionConfig } from "./config.js";
+import { createOpenDesignExtension } from "./providers/opendesign.js";
+import { createOllamaExtension, executeOllamaCli } from "./providers/ollama.js";
 
 export interface ImageContent {
   type: "image";
@@ -248,6 +250,8 @@ export class AgentSessionManager {
         path.join(sessionDir, "storage-backups")
       ),
       createTimeAwareExtension({ timeZone: this.tz }),
+      createOpenDesignExtension(),
+      createOllamaExtension(),
     ];
 
     if (this.schedulerEngine) {
@@ -652,6 +656,11 @@ export class AgentSessionManager {
     }
 
     return lines.join("\n");
+  }
+
+  async handleOllamaCommand(commandText: string, _chatJid?: string): Promise<string> {
+    const raw = commandText.replace(/^@\S+\s*/, "").trim();
+    return executeOllamaCli(raw);
   }
 
   async disposeSession(sessionId: string): Promise<void> {

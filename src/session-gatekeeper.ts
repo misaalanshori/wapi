@@ -22,6 +22,7 @@ export interface SessionGatekeeperOptions {
   onSessionPaused?: (sessionId: string) => void | Promise<void>;
   onSessionResumed?: (sessionId: string, chatJid: string) => void | Promise<void>;
   onSessionStatus?: (sessionId: string, chatJid: string) => Promise<string> | string;
+  onOllamaCommand?: (command: string, chatJid: string) => Promise<string> | string;
 }
 
 export class SessionGatekeeper {
@@ -31,6 +32,7 @@ export class SessionGatekeeper {
   private readonly onSessionPaused?: (sessionId: string) => void | Promise<void>;
   private readonly onSessionResumed?: (sessionId: string, chatJid: string) => void | Promise<void>;
   private readonly onSessionStatus?: (sessionId: string, chatJid: string) => Promise<string> | string;
+  private readonly onOllamaCommand?: (command: string, chatJid: string) => Promise<string> | string;
 
   private readonly initRegex = /^\/init-session\s+(\S+)(?:\s+([0-9a-f-]{36}))?$/i;
 
@@ -41,6 +43,7 @@ export class SessionGatekeeper {
     this.onSessionPaused = options.onSessionPaused;
     this.onSessionResumed = options.onSessionResumed;
     this.onSessionStatus = options.onSessionStatus;
+    this.onOllamaCommand = options.onOllamaCommand;
   }
 
   async handleMessage(msg: {
@@ -152,6 +155,18 @@ export class SessionGatekeeper {
         text: `Active Session ID: ${activeSession.id}`,
         sessionId: activeSession.id,
       };
+    }
+
+    const ollamaMatch = cleanCommand.match(/^\/ollama(?:-([a-z]+))?(?:\s+(.*))?$/i);
+    if (ollamaMatch) {
+      if (this.onOllamaCommand) {
+        const text = await this.onOllamaCommand(cleanCommand, msg.chatJid);
+        return {
+          type: "reply",
+          text,
+          sessionId: activeSession.id,
+        };
+      }
     }
 
     const steerMatch = cleanCommand.match(/^\/steer(?:\s+(.*))?$/i);
