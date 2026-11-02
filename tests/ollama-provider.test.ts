@@ -7,6 +7,7 @@ import {
   normalizeOllamaUrl,
   getContextLengthFromName,
   hasReasoningCapability,
+  hasVisionCapability,
   createOllamaProviderConfig,
   createOllamaCloudProviderConfig,
   createOllamaExtension,
@@ -48,6 +49,20 @@ describe("Ollama Provider & Extension", () => {
     expect(hasReasoningCapability("my-reasoning-model")).toBe(true);
     expect(hasReasoningCapability("llama3.2:latest")).toBe(false);
     expect(hasReasoningCapability("qwen2.5-coder:7b")).toBe(false);
+  });
+
+  it("detects vision capabilities accurately for VL models", () => {
+    expect(hasVisionCapability("lfm3-vl:2b-q8_0-128k")).toBe(true);
+    expect(hasVisionCapability("lfm3-vl:2b-q8_0")).toBe(true);
+    expect(hasVisionCapability("qwen2.5-vl:7b")).toBe(true);
+    expect(hasVisionCapability("llava:13b")).toBe(true);
+    expect(hasVisionCapability("llama3.2-vision:11b")).toBe(true);
+    expect(hasVisionCapability("llama3.2:3b")).toBe(false);
+    expect(hasVisionCapability("qwen2.5:7b")).toBe(false);
+
+    // Capabilities fallback
+    expect(hasVisionCapability("custom-model", ["vision", "tools"])).toBe(true);
+    expect(hasVisionCapability("custom-model", ["completion"])).toBe(false);
   });
 
   it("registers both local and cloud ollama providers via extension factory", async () => {

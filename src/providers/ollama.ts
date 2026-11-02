@@ -71,7 +71,26 @@ export function hasReasoningCapability(modelName: string, capabilities?: string[
   return false;
 }
 
-export function hasVisionCapability(capabilities?: string[], modelInfo?: Record<string, unknown>): boolean {
+export function hasVisionCapability(
+  modelName?: string,
+  capabilities?: string[],
+  modelInfo?: Record<string, unknown>
+): boolean {
+  if (modelName) {
+    const lower = modelName.toLowerCase();
+    if (
+      /(?:^|[-_:./])(vl|vision|llava|bakllava|moondream|minicpm-?v|pixtral|cogvlm)(?:[-_:./]|$)/i.test(lower) ||
+      lower.includes("-vl") ||
+      lower.includes("_vl") ||
+      lower.includes("vl:") ||
+      lower.includes(":vl") ||
+      lower.includes("vision") ||
+      lower.includes("llava")
+    ) {
+      return true;
+    }
+  }
+
   if (capabilities && Array.isArray(capabilities)) {
     if (capabilities.some((c) => c.toLowerCase().includes("vision") || c.toLowerCase().includes("image"))) {
       return true;
@@ -89,20 +108,14 @@ export function hasVisionCapability(capabilities?: string[], modelInfo?: Record<
 
 export function createOllamaModelConfig(name: string, isCloud: boolean = false, details?: any): any {
   let contextWindow = getContextLengthFromName(name);
-  let isVision = false;
-  let isReasoning = hasReasoningCapability(name);
+  let isVision = hasVisionCapability(name, details?.capabilities, details?.model_info);
+  let isReasoning = hasReasoningCapability(name, details?.capabilities);
 
-  if (details) {
-    if (details.capabilities) {
-      if (hasVisionCapability(details.capabilities, details.model_info)) isVision = true;
-      if (hasReasoningCapability(name, details.capabilities)) isReasoning = true;
-    }
-    if (details.model_info) {
-      for (const [k, v] of Object.entries(details.model_info)) {
-        if (k.endsWith(".context_length") && typeof v === "number" && v > 0) {
-          contextWindow = v;
-          break;
-        }
+  if (details?.model_info) {
+    for (const [k, v] of Object.entries(details.model_info)) {
+      if (k.endsWith(".context_length") && typeof v === "number" && v > 0) {
+        contextWindow = v;
+        break;
       }
     }
   }
@@ -318,7 +331,7 @@ export async function executeOllamaCli(
 
     const ctx = getContextLengthFromName(modelName);
     const reasoning = hasReasoningCapability(modelName, details.capabilities);
-    const vision = hasVisionCapability(details.capabilities, details.model_info);
+    const vision = hasVisionCapability(modelName, details.capabilities, details.model_info);
     const family = details.details?.family || "Unknown";
     const paramSize = details.details?.parameter_size || "Unknown";
 

@@ -216,6 +216,7 @@
   - Chat commands: `/ollama`, `/ollama status`, `/ollama models`, `/ollama info <model>` routed via `SessionGatekeeper`
 - [x] Wired extensions into `ModelRuntime` resolution at startup and `AgentSession` factory
 - [x] Fixed model clobbering bug where session extension registration wiped out configured model from provider
+- [x] Fixed vision capability detection for vision-language models (`-vl`, `vision`, `llava`) ensuring `model.input` includes `image` so Pi SDK does not omit images
 - [x] Implemented generic `normalizeOllamaUrl` parsing any host, protocol, or port dynamically without hardcoding
 - [x] Added `OLLAMA_BASE_URL` override support preventing Windows host `OLLAMA_HOST=0.0.0.0` environment variable from hijacking Docker container networking
 - [x] Regression test suite (`tests/regressions/providers-opendesign-ollama.regression.test.ts`), all gates green

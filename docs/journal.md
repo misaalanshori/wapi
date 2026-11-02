@@ -213,6 +213,7 @@
   - Added unit test suites (`tests/opendesign-provider.test.ts`, `tests/ollama-provider.test.ts`) and regression suite (`tests/regressions/providers-opendesign-ollama.regression.test.ts`).
   - Fixed root cause of Ollama requests failing before reaching the server:
     1. Model clobbering: `createOllamaExtension()` was registering a fallback 3-model array during session creation, which wiped the configured model (`lfm3-vl`) out of Pi's provider registry. Fixed by omitting `models` on extension reload and explicitly preserving `this.model`.
-    2. URL normalization: `normalizeOllamaUrl()` now cleanly formats any host string, protocol, or port generically without hardcoding specific hostnames.
-    3. Host environment collision: On Windows machines running Ollama server, `OLLAMA_HOST=0.0.0.0` is set in the system environment, causing Docker Compose to override `.env`'s `OLLAMA_HOST` with `0.0.0.0` (unreachable inside containers). Added `OLLAMA_BASE_URL` override support and automatic container loopback translation to `host.docker.internal`.
-  - All 43 test files, 184/184 tests passing. Tree clean.
+    2. Vision detection: `hasVisionCapability()` now inspects model name for vision tags (`-vl`, `_vl`, `vl:`, `vision`, `llava`) ensuring `model.input` includes `"image"`, preventing Pi SDK from stripping visual tokens with `(image omitted: model does not support images)`.
+    3. URL normalization: `normalizeOllamaUrl()` now cleanly formats any host string, protocol, or port generically without hardcoding specific hostnames.
+    4. Host environment collision: On Windows machines running Ollama server, `OLLAMA_HOST=0.0.0.0` is set in the system environment, causing Docker Compose to override `.env`'s `OLLAMA_HOST` with `0.0.0.0` (unreachable inside containers). Added `OLLAMA_BASE_URL` override support and automatic container loopback translation to `host.docker.internal`.
+  - All 43 test files, 185/185 tests passing. Tree clean.

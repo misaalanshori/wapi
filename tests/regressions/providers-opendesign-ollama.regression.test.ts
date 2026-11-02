@@ -139,5 +139,6 @@ describe("OpenDesign & Ollama Integration Regression Suite", () => {
     expect(modelAfter).toBeDefined();
     expect(modelAfter?.id).toBe("lfm3-vl:2b-q8_0-128k");
     expect(modelAfter?.baseUrl).toBe("http://my-ollama-host:11434/v1");
+    expect(modelAfter?.input).toContain("image");
   });
 });
