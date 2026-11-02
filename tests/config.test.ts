@@ -109,4 +109,22 @@ describe("loadConfig", () => {
     expect(customConfig.progressMinSteps).toBe(5);
     expect(customConfig.progressMinSeconds).toBe(120);
   });
+
+  it("prioritizes OLLAMA_BASE_URL over OLLAMA_HOST to prevent Windows system 0.0.0.0 bind override", () => {
+    process.env.SECRET_WORD = "secret";
+    process.env.PROVIDER = "ollama";
+    process.env.PROVIDER_API_KEY = "ollama";
+    process.env.PROVIDER_MODEL_ID = "lfm3-vl:2b-q8_0-128k";
+    process.env.OLLAMA_HOST = "0.0.0.0";
+    process.env.OLLAMA_BASE_URL = "http://my-lan-host:11434";
+
+    const config = loadConfig();
+    expect(config.ollamaHost).toBe("http://my-lan-host:11434");
+    expect(process.env.OLLAMA_HOST).toBe("http://my-lan-host:11434");
+
+    delete process.env.OLLAMA_BASE_URL;
+    process.env.OLLAMA_HOST = "0.0.0.0";
+    const configBind = loadConfig();
+    expect(configBind.ollamaHost).toBe("http://host.docker.internal:11434");
+  });
 });

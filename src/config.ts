@@ -72,10 +72,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const qrHttpPort = env.QR_HTTP_PORT ? parseInt(env.QR_HTTP_PORT, 10) : undefined;
   const progressMinSteps = env.PROGRESS_MIN_STEPS !== undefined ? parseInt(env.PROGRESS_MIN_STEPS, 10) : 3;
   const progressMinSeconds = env.PROGRESS_MIN_SECONDS !== undefined ? parseInt(env.PROGRESS_MIN_SECONDS, 10) : 90;
-  const ollamaHost = env.OLLAMA_HOST?.trim() || env.OLLAMA_BASE_URL?.trim() || undefined;
+  const rawOllamaHost = env.OLLAMA_HOST?.trim();
+  const ollamaHost =
+    env.OLLAMA_BASE_URL?.trim() ||
+    env.OLLAMA_URL?.trim() ||
+    env.PROVIDER_BASE_URL?.trim() ||
+    (rawOllamaHost && rawOllamaHost !== "0.0.0.0" && !rawOllamaHost.startsWith("0.0.0.0:") && !rawOllamaHost.startsWith("http://0.0.0.0")
+      ? rawOllamaHost
+      : undefined) ||
+    (rawOllamaHost === "0.0.0.0" || rawOllamaHost?.startsWith("0.0.0.0:") || rawOllamaHost?.startsWith("http://0.0.0.0")
+      ? "http://host.docker.internal:11434"
+      : undefined);
   const opendesignBaseUrl = env.OPENDESIGN_BASE_URL?.trim() || undefined;
   if (ollamaHost) {
     process.env.OLLAMA_HOST = ollamaHost;
+    process.env.OLLAMA_BASE_URL = ollamaHost;
   }
   const systemPrompt = env.SYSTEM_PROMPT?.trim() || env.CUSTOM_SYSTEM_PROMPT?.trim() || undefined;
 
