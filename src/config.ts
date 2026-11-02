@@ -24,6 +24,8 @@ export interface AppConfig {
   qrHttpPort?: number;
   progressMinSteps: number;
   progressMinSeconds: number;
+  ollamaHost?: string;
+  opendesignBaseUrl?: string;
   compaction: CompactionConfig;
 }
 
@@ -70,6 +72,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const qrHttpPort = env.QR_HTTP_PORT ? parseInt(env.QR_HTTP_PORT, 10) : undefined;
   const progressMinSteps = env.PROGRESS_MIN_STEPS !== undefined ? parseInt(env.PROGRESS_MIN_STEPS, 10) : 3;
   const progressMinSeconds = env.PROGRESS_MIN_SECONDS !== undefined ? parseInt(env.PROGRESS_MIN_SECONDS, 10) : 90;
+  const ollamaHost = env.OLLAMA_HOST?.trim() || env.OLLAMA_BASE_URL?.trim() || undefined;
+  const opendesignBaseUrl = env.OPENDESIGN_BASE_URL?.trim() || undefined;
+  if (ollamaHost) {
+    process.env.OLLAMA_HOST = ollamaHost;
+  }
   const systemPrompt = env.SYSTEM_PROMPT?.trim() || env.CUSTOM_SYSTEM_PROMPT?.trim() || undefined;
 
   const fallbackModelId =
@@ -125,6 +132,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     qrHttpPort,
     progressMinSteps,
     progressMinSeconds,
+    ollamaHost,
+    opendesignBaseUrl,
     compaction,
   };
 }

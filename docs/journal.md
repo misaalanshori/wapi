@@ -211,4 +211,7 @@
   - `src/session-gatekeeper.ts` & `src/agent-session-manager.ts`:
     - Routes `/ollama` commands in active chats directly to `handleOllamaCommand()`, allowing users to check Ollama health and model context sizes straight from WhatsApp.
   - Added unit test suites (`tests/opendesign-provider.test.ts`, `tests/ollama-provider.test.ts`) and regression suite (`tests/regressions/providers-opendesign-ollama.regression.test.ts`).
-  - All 43 test files, 181/181 tests passing. Tree clean.
+  - Fixed root cause of Ollama requests failing before reaching the server:
+    1. Model clobbering: `createOllamaExtension()` was registering a fallback 3-model array during session creation, which wiped the configured model (`lfm3-vl`) out of Pi's provider registry. Fixed by omitting `models` on extension reload and explicitly preserving `this.model`.
+    2. URL normalization: `normalizeOllamaUrl()` now cleanly formats any host string, protocol, or port generically without hardcoding specific hostnames.
+  - All 43 test files, 183/183 tests passing. Tree clean.

@@ -105,4 +105,39 @@ describe("OpenDesign & Ollama Integration Regression Suite", () => {
       expect(decision.text).toContain("Cloud:");
     }
   });
+
+  it("preserves custom active model in modelRuntime across AgentSession creation", async () => {
+    const { modelRuntime, model } = await initModelRuntime({
+      provider: "ollama",
+      providerApiKey: "ollama",
+      providerModelId: "lfm3-vl:2b-q8_0-128k",
+      ollamaHost: "http://my-ollama-host:11434",
+      agentHomeDir: tmpDir,
+    });
+
+    const mockSession: any = {
+      subscribe: vi.fn(() => () => {}),
+      dispose: vi.fn(),
+    };
+
+    const manager = new AgentSessionManager({
+      dataDir: tmpDir,
+      sharedAgentDir: path.join(tmpDir, "agent-home"),
+      model,
+      modelRuntime,
+      ollamaHost: "http://my-ollama-host:11434",
+      sessionFactory: vi.fn().mockResolvedValue({ session: mockSession }),
+    });
+
+    expect(modelRuntime.getModel("ollama", "lfm3-vl:2b-q8_0-128k")).toBeDefined();
+
+    // Create session which triggers default extension factories
+    await manager.getOrCreateSession("sess-persist-test", "chat@s.whatsapp.net");
+
+    // The model MUST still be defined and not wiped out
+    const modelAfter = modelRuntime.getModel("ollama", "lfm3-vl:2b-q8_0-128k");
+    expect(modelAfter).toBeDefined();
+    expect(modelAfter?.id).toBe("lfm3-vl:2b-q8_0-128k");
+    expect(modelAfter?.baseUrl).toBe("http://my-ollama-host:11434/v1");
+  });
 });

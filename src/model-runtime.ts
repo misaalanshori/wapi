@@ -22,6 +22,8 @@ export interface ModelRuntimeInitOptions {
   fallbackProvider?: string;
   fallbackModelId?: string;
   fallbackApiKey?: string;
+  ollamaHost?: string;
+  opendesignBaseUrl?: string;
   agentHomeDir: string;
   runtimeFactory?: (options: { authPath: string; modelsPath: string }) => Promise<ModelRuntime>;
 }
@@ -37,6 +39,8 @@ export function registerSupportedProviders(
   options?: {
     opendesignApiKey?: string;
     ollamaApiKey?: string;
+    ollamaHost?: string;
+    opendesignBaseUrl?: string;
     provider?: string;
     providerModelId?: string;
     fallbackProvider?: string;
@@ -46,7 +50,7 @@ export function registerSupportedProviders(
   if (typeof modelRuntime?.registerProvider !== "function") return;
 
   // 1. OpenDesign Provider
-  const odConfig = createOpenDesignProviderConfig();
+  const odConfig = createOpenDesignProviderConfig(options?.opendesignBaseUrl);
   if (options?.provider === "opendesign" && options.providerModelId) {
     if (!odConfig.models.some((m: any) => m.id === options.providerModelId)) {
       odConfig.models.push({
@@ -111,7 +115,7 @@ export function registerSupportedProviders(
   try {
     modelRuntime.registerProvider(
       OLLAMA_PROVIDER_ID,
-      createOllamaProviderConfig({ models: localModels })
+      createOllamaProviderConfig({ baseUrl: options?.ollamaHost, models: localModels })
     );
     modelRuntime.registerProvider(
       OLLAMA_CLOUD_PROVIDER_ID,
@@ -166,16 +170,20 @@ export async function initModelRuntime(
   const factory = options.runtimeFactory ?? ((opts) => ModelRuntime.create(opts));
   let modelRuntime = await factory({ authPath, modelsPath });
 
+  const effectiveApiKey = providerApiKey || (provider === "ollama" ? "ollama" : "");
+
   registerSupportedProviders(modelRuntime, {
     provider,
     providerModelId,
     fallbackProvider: options.fallbackProvider,
     fallbackModelId: options.fallbackModelId,
-    opendesignApiKey: provider === "opendesign" ? providerApiKey : options.fallbackApiKey,
-    ollamaApiKey: provider === "ollama-cloud" ? providerApiKey : options.fallbackApiKey,
+    ollamaHost: options.ollamaHost,
+    opendesignBaseUrl: options.opendesignBaseUrl,
+    opendesignApiKey: provider === "opendesign" ? effectiveApiKey : options.fallbackApiKey,
+    ollamaApiKey: provider === "ollama-cloud" ? effectiveApiKey : options.fallbackApiKey,
   });
 
-  await modelRuntime.setRuntimeApiKey(provider, providerApiKey);
+  await modelRuntime.setRuntimeApiKey(provider, effectiveApiKey);
 
   let model = modelRuntime.getModel(provider, providerModelId);
   if (!model && !options.runtimeFactory) {
@@ -186,8 +194,10 @@ export async function initModelRuntime(
       providerModelId,
       fallbackProvider: options.fallbackProvider,
       fallbackModelId: options.fallbackModelId,
-      opendesignApiKey: provider === "opendesign" ? providerApiKey : options.fallbackApiKey,
-      ollamaApiKey: provider === "ollama-cloud" ? providerApiKey : options.fallbackApiKey,
+      ollamaHost: options.ollamaHost,
+      opendesignBaseUrl: options.opendesignBaseUrl,
+      opendesignApiKey: provider === "opendesign" ? effectiveApiKey : options.fallbackApiKey,
+      ollamaApiKey: provider === "ollama-cloud" ? effectiveApiKey : options.fallbackApiKey,
     });
     model = modelRuntime.getModel(provider, providerModelId);
   }
@@ -214,8 +224,10 @@ export async function initModelRuntime(
         providerModelId,
         fallbackProvider: options.fallbackProvider,
         fallbackModelId: options.fallbackModelId,
-        opendesignApiKey: provider === "opendesign" ? providerApiKey : options.fallbackApiKey,
-        ollamaApiKey: provider === "ollama-cloud" ? providerApiKey : options.fallbackApiKey,
+        ollamaHost: options.ollamaHost,
+        opendesignBaseUrl: options.opendesignBaseUrl,
+        opendesignApiKey: provider === "opendesign" ? effectiveApiKey : options.fallbackApiKey,
+        ollamaApiKey: provider === "ollama-cloud" ? effectiveApiKey : options.fallbackApiKey,
       });
       fallbackModel = modelRuntime.getModel(fProv, options.fallbackModelId);
     }

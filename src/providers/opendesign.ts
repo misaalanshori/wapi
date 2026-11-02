@@ -218,20 +218,30 @@ export async function refreshOpenDesignModels(
 }
 
 export function createOpenDesignProviderConfig(
-  baseUrl: string = process.env.OPENDESIGN_BASE_URL || OPENDESIGN_BASE_URL
+  optionsOrBaseUrl?: string | { baseUrl?: string; apiKey?: string; models?: any[] }
 ): any {
+  let baseUrl = process.env.OPENDESIGN_BASE_URL || OPENDESIGN_BASE_URL;
+  let models = DEFAULT_OPENDESIGN_MODELS;
+  if (typeof optionsOrBaseUrl === "string") {
+    baseUrl = optionsOrBaseUrl;
+  } else if (optionsOrBaseUrl) {
+    if (optionsOrBaseUrl.baseUrl) baseUrl = optionsOrBaseUrl.baseUrl;
+    if (optionsOrBaseUrl.models && optionsOrBaseUrl.models.length > 0) models = optionsOrBaseUrl.models;
+  }
   return {
     name: OPENDESIGN_PROVIDER_NAME,
     baseUrl,
     apiKey: `$${OPENDESIGN_API_KEY_ENV}`,
     api: "openai-completions",
-    models: DEFAULT_OPENDESIGN_MODELS,
+    models,
     refreshModels: (context: any) => refreshOpenDesignModels(context, baseUrl),
   };
 }
 
-export function createOpenDesignExtension(baseUrl?: string) {
+export function createOpenDesignExtension(
+  optionsOrBaseUrl?: string | { baseUrl?: string; apiKey?: string; models?: any[] }
+) {
   return (pi: ExtensionAPI): void => {
-    pi.registerProvider(OPENDESIGN_PROVIDER_ID, createOpenDesignProviderConfig(baseUrl));
+    pi.registerProvider(OPENDESIGN_PROVIDER_ID, createOpenDesignProviderConfig(optionsOrBaseUrl));
   };
 }

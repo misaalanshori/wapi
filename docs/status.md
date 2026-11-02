@@ -215,4 +215,6 @@
   - Reasoning detection (`hasReasoningCapability`) and vision detection
   - Chat commands: `/ollama`, `/ollama status`, `/ollama models`, `/ollama info <model>` routed via `SessionGatekeeper`
 - [x] Wired extensions into `ModelRuntime` resolution at startup and `AgentSession` factory
+- [x] Fixed model clobbering bug where session extension registration wiped out configured model from provider
+- [x] Implemented generic `normalizeOllamaUrl` parsing any host, protocol, or port dynamically without hardcoding
 - [x] Regression test suite (`tests/regressions/providers-opendesign-ollama.regression.test.ts`), all gates green

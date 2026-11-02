@@ -96,6 +96,8 @@ export interface AgentSessionManagerOptions {
   presenceHeartbeatMs?: number;
   progressMinSteps?: number;
   progressMinSeconds?: number;
+  ollamaHost?: string;
+  opendesignBaseUrl?: string;
   compactionConfig?: CompactionConfig;
   fallbackModel?: any;
   fallbackCheckIdleMinutes?: number;
@@ -118,6 +120,8 @@ export class AgentSessionManager {
   private readonly presenceHeartbeatMs: number;
   private readonly progressMinSteps: number;
   private readonly progressMinSeconds: number;
+  private readonly ollamaHost?: string;
+  private readonly opendesignBaseUrl?: string;
   private readonly fallbackModel?: any;
   private readonly fallbackCheckIdleMs: number;
   private readonly fallbackActiveSessions = new Set<string>();
@@ -143,6 +147,8 @@ export class AgentSessionManager {
     this.presenceHeartbeatMs = options.presenceHeartbeatMs ?? 7000;
     this.progressMinSteps = options.progressMinSteps ?? 3;
     this.progressMinSeconds = options.progressMinSeconds ?? 90;
+    this.ollamaHost = options.ollamaHost;
+    this.opendesignBaseUrl = options.opendesignBaseUrl;
     this.fallbackModel = options.fallbackModel;
     this.fallbackCheckIdleMs =
       options.fallbackCheckIdleMs ??
@@ -250,8 +256,14 @@ export class AgentSessionManager {
         path.join(sessionDir, "storage-backups")
       ),
       createTimeAwareExtension({ timeZone: this.tz }),
-      createOpenDesignExtension(),
-      createOllamaExtension(),
+      createOpenDesignExtension({
+        baseUrl: this.opendesignBaseUrl,
+        models: this.model?.provider === "opendesign" ? [this.model] : undefined,
+      }),
+      createOllamaExtension({
+        baseUrl: this.ollamaHost,
+        models: this.model?.provider === "ollama" ? [this.model] : undefined,
+      }),
     ];
 
     if (this.schedulerEngine) {
@@ -660,7 +672,7 @@ export class AgentSessionManager {
 
   async handleOllamaCommand(commandText: string, _chatJid?: string): Promise<string> {
     const raw = commandText.replace(/^@\S+\s*/, "").trim();
-    return executeOllamaCli(raw);
+    return executeOllamaCli(raw, { baseUrl: this.ollamaHost });
   }
 
   async disposeSession(sessionId: string): Promise<void> {

@@ -4,6 +4,7 @@ import {
   OLLAMA_CLOUD_PROVIDER_ID,
   DEFAULT_LOCAL_URL,
   DEFAULT_CLOUD_URL,
+  normalizeOllamaUrl,
   getContextLengthFromName,
   hasReasoningCapability,
   createOllamaProviderConfig,
@@ -16,6 +17,17 @@ import path from "path";
 import fs from "fs/promises";
 
 describe("Ollama Provider & Extension", () => {
+  it("normalizes diverse Ollama host strings to valid /v1 HTTP URLs", () => {
+    expect(normalizeOllamaUrl("http://lan-ollama-host:11434")).toBe("http://lan-ollama-host:11434/v1");
+    expect(normalizeOllamaUrl("http://lan-ollama-host:11434/")).toBe("http://lan-ollama-host:11434/v1");
+    expect(normalizeOllamaUrl("http://lan-ollama-host:11434/v1")).toBe("http://lan-ollama-host:11434/v1");
+    expect(normalizeOllamaUrl("lan-ollama-host:11434")).toBe("http://lan-ollama-host:11434/v1");
+    expect(normalizeOllamaUrl("0.0.0.0")).toBe("http://127.0.0.1:11434/v1");
+    expect(normalizeOllamaUrl("0.0.0.0:11434")).toBe("http://127.0.0.1:11434/v1");
+    expect(normalizeOllamaUrl("127.0.0.1")).toBe("http://127.0.0.1:11434/v1");
+    expect(normalizeOllamaUrl("localhost")).toBe("http://localhost:11434/v1");
+  });
+
   it("resolves context lengths accurately by model family name", () => {
     expect(getContextLengthFromName("deepseek-v4-flash")).toBe(1048576);
     expect(getContextLengthFromName("kimi-k2.5")).toBe(262144);

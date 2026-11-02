@@ -52,6 +52,8 @@ export async function main() {
     fallbackProvider: config.fallbackProvider,
     fallbackModelId: config.fallbackModelId,
     fallbackApiKey: config.fallbackApiKey,
+    ollamaHost: config.ollamaHost,
+    opendesignBaseUrl: config.opendesignBaseUrl,
     agentHomeDir,
   });
   logger.info(
@@ -103,6 +105,8 @@ export async function main() {
     compactionConfig: config.compaction,
     progressMinSteps: config.progressMinSteps,
     progressMinSeconds: config.progressMinSeconds,
+    ollamaHost: config.ollamaHost,
+    opendesignBaseUrl: config.opendesignBaseUrl,
     schedulerEngine: scheduler,
   });
 

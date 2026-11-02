@@ -122,27 +122,52 @@ export function createOllamaModelConfig(name: string, isCloud: boolean = false, 
   };
 }
 
+export function normalizeOllamaUrl(rawUrl?: string): string {
+  let url = (rawUrl || process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || DEFAULT_LOCAL_URL).trim();
+  if (!url) {
+    url = DEFAULT_LOCAL_URL;
+  }
+
+  // Handle common bind addresses
+  if (url === "0.0.0.0") {
+    url = "http://127.0.0.1:11434";
+  } else if (url.startsWith("0.0.0.0:")) {
+    url = url.replace(/^0\.0\.0\.0/, "http://127.0.0.1");
+  }
+
+  // Add protocol if missing
+  if (!/^https?:\/\//i.test(url)) {
+    url = `http://${url}`;
+  }
+
+  // If localhost or 127.0.0.1 is given without any port, default to 11434
+  try {
+    const parsed = new URL(url);
+    if (!parsed.port && (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")) {
+      parsed.port = "11434";
+      url = parsed.origin + (parsed.pathname === "/" ? "" : parsed.pathname);
+    }
+  } catch {
+    // preserve url
+  }
+
+  // Strip trailing slashes and ensure /v1 endpoint suffix
+  const clean = url.replace(/\/+v1\/?$/i, "").replace(/\/+$/, "");
+  return `${clean}/v1`;
+}
+
 export function createOllamaProviderConfig(options?: OllamaProviderOptions): any {
-  const rawBase = options?.baseUrl || process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || DEFAULT_LOCAL_URL;
-  const baseUrl = rawBase.replace(/\/+$/, "").endsWith("/v1")
-    ? rawBase.replace(/\/+$/, "")
-    : `${rawBase.replace(/\/+$/, "")}/v1`;
-
-  const models = options?.models && options.models.length > 0
-    ? options.models
-    : [
-        createOllamaModelConfig("qwen2.5:latest"),
-        createOllamaModelConfig("llama3.2:latest"),
-        createOllamaModelConfig("deepseek-r1:latest"),
-      ];
-
-  return {
+  const baseUrl = normalizeOllamaUrl(options?.baseUrl);
+  const config: any = {
     name: "Ollama",
     baseUrl,
-    apiKey: "ollama",
+    apiKey: options?.apiKey || process.env.OLLAMA_API_KEY || "ollama",
     api: "openai-completions",
-    models,
   };
+  if (options?.models && options.models.length > 0) {
+    config.models = options.models;
+  }
+  return config;
 }
 
 export function createOllamaCloudProviderConfig(options?: OllamaProviderOptions): any {
@@ -153,17 +178,18 @@ export function createOllamaCloudProviderConfig(options?: OllamaProviderOptions)
 
   const apiKey = options?.apiKey || process.env.OLLAMA_API_KEY || process.env.PROVIDER_API_KEY || "";
 
-  const models = options?.models && options.models.length > 0
-    ? options.models
-    : DEFAULT_CLOUD_MODELS.map((m) => createOllamaModelConfig(m, true));
-
-  return {
+  const config: any = {
     name: "Ollama Cloud",
     baseUrl,
     apiKey: apiKey ? `$OLLAMA_API_KEY` : "ollama",
     api: "openai-completions",
-    models,
   };
+  if (options?.models && options.models.length > 0) {
+    config.models = options.models;
+  } else {
+    config.models = DEFAULT_CLOUD_MODELS.map((m) => createOllamaModelConfig(m, true));
+  }
+  return config;
 }
 
 export async function fetchLocalOllamaModels(baseUrl = DEFAULT_LOCAL_URL): Promise<any[]> {
